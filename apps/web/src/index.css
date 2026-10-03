@@ -1,0 +1,1121 @@
+:root {
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Colors */
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --primary-light: #e0f2fe;
+  --primary-rgb: 2, 132, 199;
+  --accent: #0d9488;
+  --accent-light: #ccfbf1;
+
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f1f5f9;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --border-focus: #38bdf8;
+
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --info: #3b82f6;
+  --info-bg: #eff6ff;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12);
+  --shadow-primary: 0 8px 20px -4px rgba(2, 132, 199, 0.35);
+
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme='dark'] {
+  --bg-main: #0b0f17;
+  --bg-card: #131c2e;
+  --bg-card-subtle: #1a243a;
+  --bg-glass: rgba(19, 28, 46, 0.85);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --border: #23314d;
+  --border-light: #1a253c;
+  --border-focus: #38bdf8;
+
+  --primary-light: rgba(2, 132, 199, 0.18);
+  --accent-light: rgba(13, 148, 136, 0.18);
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --info-bg: rgba(59, 130, 246, 0.15);
+
+  --shadow-md: 0 4px 14px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 14px 34px -4px rgba(0, 0, 0, 0.6);
+  --shadow-primary: 0 8px 25px -2px rgba(2, 132, 199, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* WCAG 2.2 AA Accessible Keyboard Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+/* Common Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* Glassmorphism Card */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  outline: none;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #0369a1 100%);
+  color: white;
+  box-shadow: var(--shadow-primary);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0ea5e9 0%, var(--primary) 100%);
+  box-shadow: 0 10px 25px -4px rgba(2, 132, 199, 0.45);
+}
+
+.btn-secondary {
+  background: var(--bg-card-subtle);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--border);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-outline:hover {
+  background: var(--primary-light);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+.btn-lg {
+  padding: 0.875rem 1.75rem;
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.badge-info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.badge-primary {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* Form Controls */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  transition: var(--transition);
+  outline: none;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-width: 540px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.25s ease-out;
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pulseSubtle {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.pulse {
+  animation: pulseSubtle 2s infinite ease-in-out;
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.875rem;
+  animation: slideUp 0.2s ease-out;
+}
+
+/* Apple Mac Unified Glass Hero Banner */
+.apple-glass-hero {
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 25px 60px -15px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.4);
+  position: relative;
+  overflow: hidden;
+  background-color: #0a0f1d;
+  padding: 3.75rem 2rem 3.25rem;
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+
+.apple-glass-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg,
+      rgba(15, 23, 42, 0.42) 0%,
+      rgba(10, 15, 28, 0.68) 100%);
+  backdrop-filter: blur(14px) saturate(180%) contrast(105%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%) contrast(105%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+
+.apple-glass-badge {
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+}
+
+.apple-glass-search {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.apple-glass-search:focus-within {
+  background: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28), 0 0 0 3px rgba(2, 132, 199, 0.35);
+}
+
+.apple-glass-widget {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.apple-glass-widget:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.apple-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #007aff 0%, #0284c7 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 122, 255, 0.35);
+}
+
+.live-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: pulseSubtle 2s infinite ease-in-out;
+}
+
+/* ── Hospital Services Scrolling Ticker ─────────────────────────── */
+.services-ticker {
+  display: inline-flex;
+  align-items: center;
+  animation: tickerScroll 48s linear infinite;
+  will-change: transform;
+}
+
+.services-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #00C2CB;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  padding: 0 0.15rem;
+}
+
+.services-ticker-dot {
+  color: #FF2A85;
+  font-size: 1rem;
+  line-height: 1;
+  margin: 0 0.6rem;
+  opacity: 0.7;
+}
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── Responsive Viewport Rules ───────────────────────────────────── */
+
+/* === Tablet & below (≤768px) === */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem 0.875rem 3rem;
+  }
+
+  .navbar-inner {
+    gap: 0.5rem;
+    padding: 0.6rem 1rem !important;
+  }
+
+  .navbar-brand {
+    min-width: 0;
+  }
+
+  .navbar-profile-control,
+  .desktop-auth-button {
+    display: none !important;
+  }
+
+  .niramaya-logo-subtext {
+    display: none !important;
+  }
+
+  .niramaya-logo-title {
+    font-size: 1rem !important;
+    white-space: nowrap;
+  }
+
+  .niramaya-logo-text {
+    min-width: 0;
+  }
+
+  .desktop-nav {
+    display: none !important;
+  }
+
+  .mobile-nav-toggle {
+    display: flex !important;
+  }
+
+  .user-badge-text {
+    display: none !important;
+  }
+
+  .patient-tracking-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 1rem !important;
+  }
+
+  .tracking-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    border-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .tracking-vitals-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .modal-content {
+    max-height: 95vh;
+    border-radius: var(--radius-md);
+  }
+
+  /* Modal body full-width on mobile */
+  .modal-body {
+    padding: 1.1rem;
+  }
+
+  .modal-header {
+    padding: 1rem 1.1rem;
+  }
+
+  .modal-footer {
+    padding: 1rem 1.1rem;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  /* Card spacing */
+  .card {
+    padding: 1rem;
+  }
+
+  /* Toast sticks to bottom, full width on mobile */
+  .toast-container {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+  }
+
+  .toast {
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* === Desktop only === */
+@media (min-width: 769px) {
+  .desktop-nav {
+    display: flex !important;
+  }
+
+  .mobile-nav-toggle {
+    display: none !important;
+  }
+
+  .mobile-nav-drawer {
+    display: none !important;
+  }
+}
+
+/* === Small mobile (≤480px) === */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0.75rem 0.7rem 2.5rem;
+  }
+
+  .navbar-inner {
+    padding: 0.55rem 0.75rem !important;
+  }
+
+  .navbar-actions {
+    gap: 0.4rem !important;
+    flex-shrink: 0;
+  }
+
+  /* Hide ticker on very small screens to save space */
+  .services-ticker-item {
+    font-size: 0.66rem;
+  }
+
+  /* Buttons full-width stacking in modals */
+  .modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Cards */
+  .card {
+    padding: 0.85rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .hospital-footer-content {
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  .hospital-footer-brand {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 0.6rem !important;
+    min-width: 0;
+  }
+
+  .hospital-footer-version {
+    padding-left: 0 !important;
+    border-left: 0 !important;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 360px) {
+  .niramaya-logo-title {
+    font-size: 0.88rem !important;
+  }
+
+  .tracking-vitals-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   DASHBOARD RESPONSIVE HELPERS
+   These classes are used by dashboard grid layouts inside inline styles.
+   We override the inline gridTemplateColumns for narrow viewports using
+   a utility class wrapper approach + CSS custom property overrides.
+   ──────────────────────────────────────────────────────────────────── */
+
+/* KPI metrics row: wrap nicely on small screens */
+@media (max-width: 600px) {
+  /* Force single-column grids inside modals on very small screens */
+  [data-mobile-grid="2col"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Inline-style grid collapse helpers ─────────────────────────── */
+/* These target common layout containers inside the dashboard views   */
+
+/* Dashboard profile header row */
+@media (max-width: 700px) {
+  .dash-profile-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .dash-profile-header .dash-profile-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .dash-tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .dash-tab-bar::-webkit-scrollbar {
+    height: 3px;
+  }
+}
+
+/* ── Scrollable table containers ───────────────────────────────── */
+/* Ensures tables don't burst layout on mobile */
+.table-scroll-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-sm);
+}
+
+.table-scroll-container table {
+  min-width: 600px;
+}
+
+/* ── Login / Security Gate Mobile ──────────────────────────────── */
+@media (max-width: 520px) {
+  /* Portal tab row — stack or shrink gracefully */
+  .portal-tab-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  .portal-tab-grid > button {
+    padding: 0.75rem 0.4rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .portal-tab-grid > button .tab-icon-circle {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Staff station chips: 2-column grid instead of 4 */
+  .staff-station-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Login form card */
+  .auth-card {
+    padding: 1.25rem 1rem !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Quick-login buttons stacked */
+  .quick-login-row {
+    flex-direction: column !important;
+  }
+
+  .quick-login-row > button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* ── Admin Dashboard Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Action buttons row on top of tables */
+  .admin-action-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.6rem !important;
+  }
+
+  .admin-action-bar input,
+  .admin-action-bar select {
+    width: 100% !important;
+  }
+
+  .admin-search-field {
+    flex: 0 1 auto !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-action-bar .admin-action-btns {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .admin-action-bar .admin-action-btns button {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  /* KPI card grid — allow wrapping at 2 columns */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Directory table row action buttons — stack */
+  .row-action-btns {
+    flex-direction: column !important;
+    gap: 0.3rem !important;
+    align-items: flex-end !important;
+  }
+
+  /* Form 2-column grids inside modals → 1 column */
+  .modal-form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 420px) {
+  /* KPI grid → 1 column on very small phones */
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Doctor Dashboard Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Patient filter bar */
+  .doctor-filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+
+  .doctor-filter-bar input,
+  .doctor-filter-bar select {
+    width: 100% !important;
+  }
+
+  /* Patient stat pills row — wrap */
+  .doctor-stat-pills {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+
+  /* Shift card — stack vertically */
+  .doctor-shift-card-inner {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+
+  /* Patient action buttons in table */
+  .patient-action-btns {
+    flex-wrap: wrap !important;
+    gap: 0.3rem !important;
+    justify-content: flex-start !important;
+  }
+
+  .doctor-patient-search {
+    width: 100% !important;
+  }
+
+  .doctor-priority-filters {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .doctor-patient-table-wrapper {
+    overflow: visible !important;
+  }
+
+  .doctor-patient-table,
+  .doctor-patient-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .doctor-patient-table thead {
+    display: none;
+  }
+
+  .doctor-patient-table tbody {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .doctor-patient-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1rem;
+    padding: 0.9rem;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .doctor-patient-table tbody td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    font-size: 0.82rem !important;
+  }
+
+  .doctor-patient-table tbody td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .doctor-patient-table tbody td:first-child,
+  .doctor-patient-table tbody .doctor-clinical-actions-cell {
+    grid-column: 1 / -1;
+  }
+
+  .doctor-patient-table tbody td:first-child {
+    padding-bottom: 0.65rem !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  .doctor-patient-table tbody .doctor-clinical-actions-cell {
+    margin-top: 0.2rem;
+    padding-top: 0.8rem !important;
+    border-top: 1px solid var(--border) !important;
+  }
+
+  .doctor-patient-table tbody .doctor-clinical-actions-cell::before {
+    color: var(--primary);
+    font-size: 0.76rem;
+  }
+
+  .doctor-clinical-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 0.5rem !important;
+  }
+
+  .doctor-clinical-actions button {
+    min-width: 0;
+    min-height: 42px;
+    justify-content: center;
+    padding: 0.45rem 0.35rem !important;
+    font-size: 0.76rem !important;
+  }
+
+  .doctor-clinical-actions .clinical-action-primary {
+    grid-column: span 1;
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+/* ── Staff Dashboard Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Reception queue action row */
+  .reception-action-bar {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Pharmacy / lab table containers already have overflowX:auto */
+
+  /* Staff profile card */
+  .staff-profile-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+}
+
+/* ── Mobile Nav Drawer ───────────────────────────────────────────── */
+.mobile-nav-drawer {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.2s ease-out;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition);
+  width: 100%;
+  min-height: 44px; /* touch target */
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* ── Hospital Doctor Card & Grid ────────────────────────────────── */
+.doctor-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .doctor-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .doctor-hospital-card .doctor-card-top-bar {
+    grid-template-columns: 110px 1fr !important;
+  }
+  .doctor-hospital-card .doctor-card-top-bar h3 {
+    font-size: 0.88rem !important;
+  }
+  .doctor-hospital-card .doctor-card-content-area {
+    grid-template-columns: 100px 1fr !important;
+    padding: 10px 12px !important;
+    gap: 10px !important;
+  }
+}
+
+/* ── Touch target minimum size ──────────────────────────────────── */
+@media (max-width: 768px) {
+  button, 
+  [role="button"] {
+    min-height: 36px;
+  }
+
+  /* Improve table readability on mobile */
+  table th,
+  table td {
+    padding: 0.6rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap;
+  }
+}
+
+/* ── Navbar responsive tweaks ──────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Brand logo area on mobile */
+  .niramaya-logo-subtext {
+    display: none !important;
+  }
+}
