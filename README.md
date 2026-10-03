@@ -399,4 +399,4 @@ Agar terminal me `Could not connect to PostgreSQL DATABASE_URL, using integrated
 ---
 
 ## 📄 License
-This project is open-source and ready for commercial or educational use.
+This project is open-source and ready for commercial or educational use.# healthcare-platform
