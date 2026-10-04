@@ -133,13 +133,13 @@ Patients and clinical staff use the public application:
 Administrators sign in only through the separate admin application:
 👉 **[http://localhost:3001](http://localhost:3001)**
 
-The public app does not offer an administrator sign-in or administrator station switch. Configure/create an administrator account through the local database setup tools; then use those credentials on the admin origin. Never use seeded/demo credentials in production.
+The public app does not offer an administrator sign-in or administrator station switch. For a local demo database seeded with `SEED_PASSWORD=Demo@12345`, use the demo administrator credentials below. If you created the administrator with the one-time bootstrap tool instead, use the email and password you supplied there. Never use seeded/demo credentials in production.
 
 | Role        | Email                                              | Password              | Access Area                     |
 | :---------- | :------------------------------------------------- | :-------------------- | :------------------------------ |
 | **Patient** | `patient@demo.test`                                | Local `SEED_PASSWORD` | Patient Portal & Booking Wizard |
 | **Doctor**  | `doctor@demo.test`                                 | Local `SEED_PASSWORD` | Doctor Schedule & Consultations |
-| **Admin**   | Administrator account created for this environment | Configured locally    | Dedicated Admin Application     |
+| **Admin**   | `admin@demo.test` *(seeded local demo only)*         | `Demo@12345` *(only when `SEED_PASSWORD=Demo@12345`)* | Dedicated Admin Application |
 
 ---
 
