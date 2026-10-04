@@ -6,7 +6,7 @@ Status: The shared package and API workspace are in place, and the web app is be
 
 A full-stack, enterprise-grade **Healthcare Appointment & Patient-Care Management Platform** built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS v4**, **Express**, and **PostgreSQL**.
 
-Includes dedicated portals for **Patients**, **Doctors**, and **Administrators** with role-based access control (RBAC), appointment scheduling, clinical profile management, analytics, and instant one-click demo credentials.
+Includes portals for **Patients**, **Doctors**, and **Administrators** with role-based access control (RBAC), appointment scheduling, clinical profile management, analytics, and a separately hosted administrator application.
 
 ---
 
@@ -53,11 +53,13 @@ Yeh project standard Node.js environment pe run hota hai. Isme frontend (React V
 ### Prerequisites
 
 Aapke computer me yeh installed hone chahiye:
+
 1. **Node.js**: v18.0.0 ya v20+ (Download from: [nodejs.org](https://nodejs.org/))
 2. **Git**: (Optional, repo clone karne ke liye)
 3. **npm** (Node.js ke sath automatically install ho jata hai) ya **bun**
 
 Check versions:
+
 ```bash
 node -v   # Should be v18+ or v20+
 npm -v    # Should be v9+ or v10+
@@ -94,31 +96,16 @@ copy .env.example .env
 Copy-Item .env.example .env
 ```
 
-Aapki `.env` file aisi dikhegi:
-```env
-# Database Connection URL (Optional: Agar PostgreSQL na ho toh app automatically in-memory database me chalti hai)
-DATABASE_URL="postgresql://postgres:password@localhost:5432/healthcare_db"
+Set `PUBLIC_APP_URL=http://localhost:3000` and `ADMIN_APP_URL=http://localhost:3001` for local development. Generate a unique local signing key with `openssl rand -base64 48` and place it in `.env` as `JWT_ACCESS_SECRET`. The API requires PostgreSQL; it does not fall back to an in-memory database. Keep development secrets separate from production secrets.
 
-# JWT Secret Key
-JWT_SECRET="healthcare_super_secure_jwt_secret_key_2025"
-
-# Server Port (Default: 3000)
-PORT=3000
-
-# Base URL
-APP_URL="http://localhost:3000"
-```
-
-> 💡 **Note**: Agar aapke paas abhi PostgreSQL installed nahi hai, tab bhi koi dikkat nahi hai! Project me pre-loaded mock database engine hai jo automatically initialize ho jata hai.
-
+For the local one-click demo accounts only, set `SEED_PASSWORD=Demo@12345` before running `npm run db:seed`. Never use this demo password or seed data in production.
 ---
 
 ### Step 3: Run Development Server
 
-Project root se dependencies install karne ke baad app start karein:
+Project root se app start karein. This starts the API, public app, and dedicated admin app as separate local processes:
 
 ```bash
-npm install
 npm run dev
 ```
 
@@ -128,35 +115,41 @@ Ye root script backend aur frontend ko ek sath start karta hai. Agar sirf API ch
 npm run dev -w @healthcare/api
 ```
 
-Terminal me aapko yeh output dikhega:
+Before the first start, apply any pending database migrations with `npm run db:migrate`. Terminal me API and Vite startup output dikhega:
+
 ```
-[HealthCare+] Server running on http://0.0.0.0:3000
+API: http://localhost:4000
+Public app: http://localhost:3000
+Admin app: http://localhost:3001
 ```
 
 ---
 
 ### Step 4: Access in Browser & Demo Logins
 
-Browser open karein aur visit karein:
+Patients and clinical staff use the public application:
 👉 **[http://localhost:3000](http://localhost:3000)**
 
-Login page par aap **One-Click Demo Login** buttons se directly login kar sakte hain ya neeche diye credentials use kar sakte hain:
+Administrators sign in only through the separate admin application:
+👉 **[http://localhost:3001](http://localhost:3001)**
 
-| Role | Email | Password | Access Area |
-| :--- | :--- | :--- | :--- |
-| **Patient** | `patient@demo.com` | `demo123` | Patient Portal & Booking Wizard |
-| **Doctor** | `doctor@demo.com` | `demo123` | Doctor Schedule & Consultations |
-| **Admin** | `admin@demo.com` | `demo123` | Admin Analytics & User Ledger |
+The public app does not offer an administrator sign-in or administrator station switch. Configure/create an administrator account through the local database setup tools; then use those credentials on the admin origin. Never use seeded/demo credentials in production.
+
+| Role        | Email                                              | Password              | Access Area                     |
+| :---------- | :------------------------------------------------- | :-------------------- | :------------------------------ |
+| **Patient** | `patient@demo.test`                                | Local `SEED_PASSWORD` | Patient Portal & Booking Wizard |
+| **Doctor**  | `doctor@demo.test`                                 | Local `SEED_PASSWORD` | Doctor Schedule & Consultations |
+| **Admin**   | Administrator account created for this environment | Configured locally    | Dedicated Admin Application     |
 
 ---
 
 ## 🐳 DevOps & Docker Setup
 
-Agar aapko complete system (App + PostgreSQL Database) bina kisi manual dependency ke ek command me chalana hai, toh **Docker Compose** use karein.
+Docker Compose is optional. Its production-oriented configuration requires a strong URL-safe `POSTGRES_PASSWORD`, a private-network `DATABASE_URL`, and an HTTPS `CORS_ORIGINS` value. It does not seed demo accounts, does not publish the database port, and binds the application to loopback for an HTTPS reverse proxy.
 
 ### Run with Docker Compose (Single Command)
 
-Is project me `Dockerfile` aur `docker-compose.yml` pre-configured hain.
+Before starting Compose, configure the required secrets and production HTTPS origin in the deployment environment.
 
 ```bash
 # 1. Docker containers build and start karein
@@ -164,22 +157,35 @@ docker compose up --build
 ```
 
 Background / Detached mode me chalane ke liye:
+
 ```bash
 docker compose up -d --build
 ```
 
 Isse 2 containers chalenge:
-1. `healthcare_postgres`: PostgreSQL 16 Alpine database with persistent volume (`pgdata`) aur auto-imported `schema.sql` + `seed.sql`.
-2. `healthcare_app`: Production Node.js 20 container listening on port `3000`.
 
-**App URL**: [http://localhost:3000](http://localhost:3000)
+1. `healthcare_postgres`: PostgreSQL 16 with a required deployment password and private networking.
+2. `healthcare_app`: Production Node.js container bound to `127.0.0.1:3000`; place it behind an HTTPS reverse proxy.
+
+Apply database migrations and create the first administrator once before serving traffic:
+
+```bash
+docker compose exec app node apps/api/dist/migrate.js
+docker compose exec app node apps/api/dist/createAdmin.js
+```
+
+Provide unique `ADMIN_BOOTSTRAP_NAME`, `ADMIN_BOOTSTRAP_EMAIL`, and `ADMIN_BOOTSTRAP_PASSWORD` values for that one-time command, then remove them.
+
+**App URL behind your HTTPS reverse proxy**: [https://your-domain](https://your-domain)
 
 Containers stop karne ke liye:
+
 ```bash
 docker compose down
 ```
 
-Data reset karke fresh start karne ke liye:
+The following removes the persistent database volume and permanently deletes its data. Never use this on a production deployment.
+
 ```bash
 docker compose down -v
 docker compose up --build
@@ -189,36 +195,26 @@ docker compose up --build
 
 ### Build and Run with Dockerfile
 
-Agar sirf app ka Docker image alag se build karna ho:
-
-```bash
-# 1. Docker image build karein
-docker build -t healthcare-platform:latest .
-
-# 2. Container run karein
-docker run -p 3000:3000 \
-  -e PORT=3000 \
-  -e JWT_SECRET=my_secret_key_123 \
-  --name healthcare-app healthcare-platform:latest
-```
-
----
+For deployment, configure the required production secrets and HTTPS settings described in the production security checklist. Do not pass JWT or database secrets as command-line arguments; use your deployment secret manager.
 
 ## 🗄️ Database Setup (PostgreSQL)
 
-### Zero-Config Fallback Mode
-By default, agar `DATABASE_URL` connect nahi hoti, toh app automatically **built-in relational data engine** par switch ho jati hai jisme complete initial doctors, appointments, patients aur admin accounts pre-loaded rehte hain.
+### PostgreSQL Requirement
+
+A running PostgreSQL database is required. Configure `DATABASE_URL`, then run the database migrations before starting the API. The application does not silently switch to an in-memory database.
 
 ### Connecting Real PostgreSQL
 
 Real PostgreSQL database use karne ke steps:
 
 1. **Database create karein**:
+
    ```bash
    psql -U postgres -c "CREATE DATABASE healthcare_db;"
    ```
 
 2. **Schema aur Seed tables import karein**:
+
    ```bash
    psql -U postgres -d healthcare_db -f database/schema.sql
    psql -U postgres -d healthcare_db -f database/seed.sql
@@ -233,6 +229,20 @@ Real PostgreSQL database use karne ke steps:
 
 ## 🚀 Production Deployment Guide
 
+### Production Security Requirements
+
+- Generate a unique `JWT_ACCESS_SECRET` with `openssl rand -base64 48`; production requires at least 64 characters.
+- Set `COOKIE_SECURE=true` and serve the site only over HTTPS. The API refuses production startup if secure cookies are disabled.
+- Configure `DATABASE_URL`, `DATABASE_SSL=require` where supported, and `CORS_ORIGINS` with only trusted HTTPS origins.
+- Apply migrations, then create the first administrator exactly once using `ADMIN_BOOTSTRAP_NAME`, `ADMIN_BOOTSTRAP_EMAIL`, and a unique `ADMIN_BOOTSTRAP_PASSWORD` of at least 14 characters:
+  `node apps/api/dist/migrate.js` and `node apps/api/dist/createAdmin.js`.
+- Remove bootstrap credentials from the environment after use. Never run demo database seeding in production.
+- Administrators provision staff logins from the staff form, with a unique initial password that must be shared out-of-band. Staff accounts and their initial shift are created together; password credentials are never returned by the API.
+- Doctor accounts must be verified and have an appointment relationship with a patient to view that patient's tracking data or record their vitals. Administrative routes are restricted to administrators.
+- Admin shift and location assignments are stored in PostgreSQL and tied to the staff member's sign-in email. Doctor and staff dashboards check for changes every 10 seconds and refresh immediately when returning to the tab; assignment changes are also recorded in the shift audit table.
+- Access tokens are bound to active server-side sessions. After deploying this change, existing users must sign in again once; logging out or revoking a session invalidates its access tokens.
+- Clinical-access audit events are stored in PostgreSQL. Configure and periodically verify an appropriate retention and protected off-site archival process; application logging alone does not provide immutable audit storage or SOC 2 certification.
+
 ### Production Build & Start
 
 Production environment me client bundle compile karne aur optimized server run karne ke liye:
@@ -241,8 +251,12 @@ Production environment me client bundle compile karne aur optimized server run k
 # 1. Client & Server bundle build karein (Output: /dist)
 npm run build
 
-# 2. Production server start karein
-npm run start
+# Apply database migrations and create the first admin once, before deployment.
+node apps/api/dist/migrate.js
+node apps/api/dist/createAdmin.js
+
+# Start the production API and built web client.
+npm run start -w @healthcare/api
 ```
 
 ---
@@ -258,8 +272,8 @@ npm install -g pm2
 # 2. Production build create karein
 npm run build
 
-# 3. PM2 se start karein
-pm2 start dist/server.cjs --name "healthcare-app" -i max
+# 3. PM2 se start karein (one process per host; scale with a process manager/orchestrator)
+pm2 start npm --name "healthcare-app" -- run start -w @healthcare/api
 
 # 4. Logs check karein
 pm2 logs healthcare-app
@@ -273,41 +287,63 @@ pm2 save
 
 ### Nginx Reverse Proxy Config
 
-Production server par SSL (HTTPS) aur port 80/443 ko internal port 3000 par route karne ke liye Nginx config:
+Set `PUBLIC_APP_URL=https://example.com` and `ADMIN_APP_URL=https://admin.example.com` in the production environment used by both the API and the frontend build. Point both DNS names at the HTTPS reverse proxy; it can serve the same built SPA/API process while the frontend selects the dedicated admin experience by the configured admin origin. Set `COOKIE_SECURE=true` and configure `TRUST_PROXY=1` when one trusted proxy is in front of the API.
+
+The example below routes both HTTPS origins to the local Node API/static-server port:
 
 ```nginx
 # /etc/nginx/sites-available/healthcare.conf
 
 server {
     listen 80;
-    server_name yourdomain.com www.yourdomain.com;
+    server_name example.com admin.example.com;
+    return 301 https://$host$request_uri;
+}
 
-    # Gzip compression
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:4000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name admin.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/admin.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/admin.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
 Enable karein aur restart karein:
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/healthcare.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
-# Free SSL ke liye Certbot run karein:
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+# Free SSL certificates for both origins:
+sudo certbot --nginx -d example.com -d admin.example.com
 ```
 
 ---
@@ -321,82 +357,94 @@ name: HealthCare+ CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    - name: Install Dependencies
-      run: npm ci
+      - name: Install Dependencies
+        run: npm ci
 
-    - name: TypeScript Lint & Type Check
-      run: npm run lint
+      - name: TypeScript Lint & Type Check
+        run: npm run lint
 
-    - name: Production Build
-      run: npm run build
+      - name: Production Build
+        run: npm run build
 
-    - name: Build Docker Image
-      run: docker build -t healthcare-platform:${{ github.sha }} .
+      - name: Build Docker Image
+        run: docker build -t healthcare-platform:${{ github.sha }} .
 ```
 
 ---
 
 ## ⚙️ Environment Variables (.env)
 
-| Variable | Description | Default | Required |
-| :--- | :--- | :--- | :--- |
-| `PORT` | Web server port | `3000` | Optional |
-| `NODE_ENV` | Environment (`development` / `production`) | `development` | Optional |
-| `JWT_SECRET` | Secret key for signing & verifying JWT tokens | `healthcare_super_secure_...` | Recommended |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://...` | Optional (Auto-fallback to in-memory) |
-| `GEMINI_API_KEY` | Google Gemini AI API key (Server-side) | `""` | Optional |
-| `APP_URL` | Application canonical base URL | `http://localhost:3000` | Optional |
+| Variable                   | Description                        | Development                        | Production                                        |
+| :------------------------- | :--------------------------------- | :--------------------------------- | :------------------------------------------------ |
+| `NODE_ENV`                 | Runtime mode                       | `development`                      | `production`                                      |
+| `PORT`                     | API server port                    | `4000`                             | Set by deployment                                 |
+| `DATABASE_URL`             | PostgreSQL connection string       | Local PostgreSQL URL               | Required private database URL                     |
+| `DATABASE_SSL`             | PostgreSQL TLS mode                | `disable` for local DB             | `require` when supported                          |
+| `JWT_ACCESS_SECRET`        | JWT signing key                    | Generate a local-only random value | Unique generated value, 64+ characters            |
+| `CORS_ORIGINS`             | Allowed browser origins            | `http://localhost:5173`            | Trusted HTTPS origin(s) only                      |
+| `COOKIE_SECURE`            | Require HTTPS for auth cookies     | `false`                            | Must be `true`                                    |
+| `SEED_PASSWORD`            | Shared local demo-account password | Required only for local `db:seed`  | Do not set; demo seeding is disabled              |
+| `ADMIN_BOOTSTRAP_NAME`     | Initial administrator name         | Not required                       | One-time bootstrap only                           |
+| `ADMIN_BOOTSTRAP_EMAIL`    | Initial administrator email        | Not required                       | One-time bootstrap only                           |
+| `ADMIN_BOOTSTRAP_PASSWORD` | Initial administrator password     | Not required                       | Unique password, 14+ characters; remove after use |
 
 ---
 
 ## 📜 NPM Scripts
 
-| Script | Command | Description |
-| :--- | :--- | :--- |
-| `npm run dev` | `tsx server.ts` | Dev server with hot reloading on port 3000 |
-| `npm run build` | `vite build && esbuild ...` | Compiles client SPA & bundles production `dist/server.cjs` |
-| `npm run start` | `node dist/server.cjs` | Runs the compiled production server |
-| `npm run lint` | `tsc --noEmit` | Runs TypeScript type checking without errors |
-| `npm run clean` | `rm -rf dist` | Cleans build artifacts |
+| Script                             | Command                     | Description                                  |
+| :--------------------------------- | :-------------------------- | :------------------------------------------- |
+| `npm run dev`                      | `concurrently`              | Runs API and web development servers locally |
+| `npm run build`                    | Workspace builds            | Builds production API and web assets         |
+| `npm run start -w @healthcare/api` | `node dist/server.js`       | Runs the production API and built web client |
+| `npm run typecheck`                | Workspace TypeScript checks | Type-checks all workspaces                   |
+| `npm test`                         | Workspace Vitest suites     | Runs available tests                         |
+| `npm run lint`                     | ESLint                      | Lints the project                            |
 
 ---
 
 ## 🛠️ Troubleshooting & FAQs
 
 #### Q1: Port 3000 already in use error: `EADDRINUSE: address already in use :::3000`
+
 **Solution**: Port 3000 par koi aur process chal raha hai. Us process ko stop karein:
+
 - **Windows**: `netstat -ano | findstr :3000` fir `taskkill /PID <PID> /F`
 - **Mac/Linux**: `lsof -i :3000` fir `kill -9 <PID>`
 - Ya `.env` file me `PORT=3001` change kar dein.
 
 #### Q2: Login error "Invalid credentials"
+
 **Solution**: Demo login credentials verify karein:
+
 - Email: `patient@demo.com`
 - Password: `demo123`
-*(Make sure caps lock off hai)*
+  _(Make sure caps lock off hai)_
 
 #### Q3: Database connection warning in terminal
+
 Agar terminal me `Could not connect to PostgreSQL DATABASE_URL, using integrated robust relational engine` dikhe, toh ghabraye nahi! App bina PostgreSQL ke bhi smoothly chalegi using built-in memory store.
 
 ---
 
 ## 📄 License
+
 This project is open-source and ready for commercial or educational use.# healthcare-platform
