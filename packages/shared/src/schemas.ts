@@ -18,7 +18,8 @@ const trimmed = (min: number, max: number, label: string) =>
 const emptyToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v);
 
 /** Optional text field where an empty string means "not provided". */
-const optionalText = (max: number) => z.preprocess(emptyToUndefined, z.string().trim().max(max).optional());
+const optionalText = (max: number) =>
+  z.preprocess(emptyToUndefined, z.string().trim().max(max).optional());
 
 export const emailSchema = z
   .string({ required_error: 'Email is required' })
@@ -27,11 +28,75 @@ export const emailSchema = z
   .email('Enter a valid email address')
   .max(254);
 
+export const shiftAssignmentSchema = z.object({
+  targetEmail: emailSchema,
+  shiftName: trimmed(2, 50, 'Shift name'),
+  shiftHours: trimmed(3, 80, 'Shift hours'),
+  breakTime: trimmed(3, 80, 'Break time'),
+  workingDays: trimmed(2, 100, 'Working days'),
+  workingLocation: trimmed(2, 100, 'Working location'),
+  roomArea: trimmed(1, 100, 'Room or assigned area'),
+});
+export type ShiftAssignmentInput = z.infer<typeof shiftAssignmentSchema>;
+
 export const passwordSchema = z
   .string({ required_error: 'Password is required' })
   .min(8, 'Password must be at least 8 characters')
   .max(72, 'Password must be at most 72 characters') // bcrypt truncates beyond 72 bytes
   .refine((v) => /[A-Za-z]/.test(v) && /\d/.test(v), 'Password must include a letter and a number');
+
+export const createStaffAccountSchema = z.object({
+  name: trimmed(2, 100, 'Full name'),
+  email: emailSchema,
+  password: passwordSchema.optional(),
+  role: z.enum(['STAFF', 'NURSE', 'RECEPTIONIST', 'PHARMACIST', 'LABORATORY_STAFF']),
+  shiftAssignment: shiftAssignmentSchema.omit({ targetEmail: true }),
+});
+export type CreateStaffAccountInput = z.infer<typeof createStaffAccountSchema>;
+
+export const adminCreateUserSchema = z.object({
+  name: trimmed(2, 100, 'Full name'),
+  email: emailSchema,
+  password: passwordSchema.optional(),
+  role: z.enum([
+    'PATIENT',
+    'DOCTOR',
+    'ADMIN',
+    'STAFF',
+    'NURSE',
+    'RECEPTIONIST',
+    'PHARMACIST',
+    'LABORATORY_STAFF',
+  ]),
+  specialization: optionalText(100),
+  department: optionalText(100),
+  phone: optionalText(30),
+});
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required').max(72),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.confirmPassword !== undefined && v.newPassword !== v.confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['confirmPassword'],
+        message: 'New password and confirmation do not match',
+      });
+    }
+    if (v.currentPassword === v.newPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['newPassword'],
+        message: 'New password must be different from current password',
+      });
+    }
+  });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export const isoDateSchema = z
   .string()
@@ -93,7 +158,10 @@ export const patientProfileSchema = z.object({
   dateOfBirth: z.preprocess(
     emptyToUndefined,
     isoDateSchema
-      .refine((v) => v <= new Date().toISOString().slice(0, 10), 'Date of birth cannot be in the future')
+      .refine(
+        (v) => v <= new Date().toISOString().slice(0, 10),
+        'Date of birth cannot be in the future',
+      )
       .optional(),
   ),
   bloodGroup: z.preprocess(emptyToUndefined, z.enum(BLOOD_GROUPS).optional()),
@@ -169,7 +237,10 @@ export const availabilityDaySchema = z
 export const availabilitySchema = z
   .array(availabilityDaySchema)
   .length(7, 'Provide all 7 days')
-  .refine((days) => new Set(days.map((d) => d.dayOfWeek)).size === 7, 'Each weekday must appear once');
+  .refine(
+    (days) => new Set(days.map((d) => d.dayOfWeek)).size === 7,
+    'Each weekday must appear once',
+  );
 export type AvailabilityInput = z.infer<typeof availabilitySchema>;
 
 // ---------- doctors (public search) ----------
@@ -223,8 +294,15 @@ export const notificationListQuerySchema = paginationSchema.extend({
 
 export const adminUserListQuerySchema = paginationSchema.extend({
   q: z.string().trim().max(100).optional(),
-  role: z.enum(['PATIENT', 'DOCTOR', 'ADMIN']).optional(),
+  role: z
+    .enum(['PATIENT', 'DOCTOR', 'ADMIN', 'STAFF', 'NURSE', 'RECEPTIONIST', 'PHARMACIST', 'LABORATORY_STAFF'])
+    .optional(),
   status: z.enum(USER_STATUSES).optional(),
+});
+
+export const adminAuditQuerySchema = paginationSchema.extend({
+  action: z.string().trim().min(1).max(80).optional(),
+  actorUserId: z.coerce.number().int().positive().optional(),
 });
 
 export const updateUserStatusSchema = z.object({ status: z.enum(USER_STATUSES) });

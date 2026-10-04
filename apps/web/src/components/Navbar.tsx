@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   Activity,
   Edit3,
-  BriefcaseMedical,
   Menu,
   X,
   Lock,
@@ -157,7 +156,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div
         style={{
           borderBottom: '1px solid rgba(0, 194, 203, 0.18)',
-          background: 'linear-gradient(90deg, rgba(0, 194, 203, 0.07) 0%, rgba(255, 42, 133, 0.05) 100%)',
+          background:
+            'linear-gradient(90deg, rgba(0, 194, 203, 0.07) 0%, rgba(255, 42, 133, 0.05) 100%)',
           overflow: 'hidden',
           whiteSpace: 'nowrap',
           padding: '0.3rem 0',
@@ -232,7 +232,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Navigation items */}
-        <nav className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <nav
+          className="desktop-nav"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}
+        >
           {user ? (
             <>
               <button
@@ -240,7 +243,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 style={{
                   background: isCurrentOnPortal ? 'var(--primary-light)' : 'transparent',
                   color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-secondary)',
-                  border: isCurrentOnPortal ? '1px solid rgba(2, 132, 199, 0.25)' : '1px solid transparent',
+                  border: isCurrentOnPortal
+                    ? '1px solid rgba(2, 132, 199, 0.25)'
+                    : '1px solid transparent',
                   padding: '0.5rem 0.95rem',
                   borderRadius: 'var(--radius-sm)',
                   fontSize: '0.86rem',
@@ -262,7 +267,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 style={{
                   background: isCurrentOnTracking ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
                   color: isCurrentOnTracking ? '#ef4444' : 'var(--text-secondary)',
-                  border: isCurrentOnTracking ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid transparent',
+                  border: isCurrentOnTracking
+                    ? '1px solid rgba(239, 68, 68, 0.3)'
+                    : '1px solid transparent',
                   padding: '0.5rem 0.95rem',
                   borderRadius: 'var(--radius-sm)',
                   fontSize: '0.86rem',
@@ -277,8 +284,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Activity size={16} color={isCurrentOnTracking ? '#ef4444' : 'var(--primary)'} />
                 <span>Health Telemetry</span>
               </button>
-
-
             </>
           ) : (
             <div
@@ -298,9 +303,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Right side controls */}
-        <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div
+          className="navbar-actions"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}
+        >
           {/* Dark mode toggle */}
           <button
+            className="navbar-theme-toggle"
             onClick={onToggleDarkMode}
             title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -364,8 +373,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               {/* User badge card & dropdown container */}
-              <div className="navbar-profile-control" style={{ position: 'relative' }} ref={menuRef}>
+              <div className="navbar-profile-control" ref={menuRef}>
                 <div
+                  className="navbar-profile-trigger"
                   title={`Open ${userPortalLabel}`}
                   style={{
                     display: 'flex',
@@ -377,16 +387,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                     border: isCurrentOnPortal
                       ? '1.5px solid var(--primary)'
                       : '1px solid var(--border)',
-                    boxShadow: isCurrentOnPortal
-                      ? '0 0 0 2px rgba(2, 132, 199, 0.15)'
-                      : 'none',
+                    boxShadow: isCurrentOnPortal ? '0 0 0 2px rgba(2, 132, 199, 0.15)' : 'none',
                     userSelect: 'none',
                     cursor: 'pointer',
                     transition: 'all 0.18s ease',
                   }}
                 >
                   {/* Left Clickable Area (Navigates directly to user's portal) */}
-                  <div
+                  <button
+                    type="button"
+                    className="navbar-profile-portal-button"
+                    aria-label={`Open ${userPortalLabel}`}
                     onClick={handleCardClick}
                     style={{
                       display: 'flex',
@@ -422,14 +433,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                         user.name.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <div className="user-badge-text" style={{ textAlign: 'left', lineHeight: 1.15 }}>
+                    <div
+                      className="user-badge-text"
+                      style={{ textAlign: 'left', lineHeight: 1.15 }}
+                    >
                       <div
                         style={{
                           fontSize: '0.82rem',
                           fontWeight: 700,
-                          color: isCurrentOnPortal
-                            ? 'var(--primary)'
-                            : 'var(--text-primary)',
+                          color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-primary)',
                           maxWidth: '120px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -442,9 +454,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         style={{
                           fontSize: '0.67rem',
                           fontWeight: 600,
-                          color: isCurrentOnPortal
-                            ? 'var(--primary)'
-                            : 'var(--text-muted)',
+                          color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-muted)',
                           letterSpacing: '0.04em',
                           textTransform: 'uppercase',
                         }}
@@ -452,10 +462,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                         {user.role}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Right Chevron Button (Toggles profile menu) */}
-                  <div
+                  <button
+                    type="button"
+                    className="navbar-profile-menu-toggle"
+                    aria-label={profileMenuOpen ? 'Close profile menu' : 'Open profile menu'}
+                    aria-expanded={profileMenuOpen}
+                    aria-controls="navbar-profile-menu"
                     onClick={(e) => {
                       e.stopPropagation();
                       setProfileMenuOpen((prev) => !prev);
@@ -478,28 +493,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                         transition: 'transform 0.15s ease',
                       }}
                     />
-                  </div>
+                  </button>
                 </div>
 
                 {/* Dropdown Menu */}
                 {profileMenuOpen && (
                   <div
+                    id="navbar-profile-menu"
+                    className="navbar-profile-menu"
+                    role="region"
+                    aria-label="Profile and account menu"
                     style={{
                       position: 'absolute',
                       top: 'calc(100% + 8px)',
                       right: 0,
-                      width: '250px',
+                      width: 'min(360px, calc(100vw - 1.5rem))',
+                      maxHeight: 'min(75vh, 600px)',
+                      overflowY: 'auto',
+                      overscrollBehavior: 'contain',
                       background: 'var(--bg-card)',
                       border: '1px solid var(--border)',
                       borderRadius: 'var(--radius-md)',
                       boxShadow: 'var(--shadow-lg)',
                       padding: '0.5rem',
                       zIndex: 100,
-                      animation: 'fadeIn 0.15s ease',
+                      animation: 'slideUp 0.18s ease-out',
                     }}
                   >
                     {/* Header info with Avatar */}
                     <div
+                      className="navbar-profile-menu-header"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -510,6 +533,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}
                     >
                       <div
+                        className="navbar-profile-menu-avatar"
                         style={{
                           width: '40px',
                           height: '40px',
@@ -579,6 +603,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     {/* Edit Profile & Photo Button */}
                     <button
+                      className="navbar-profile-menu-featured"
                       onClick={() => {
                         setProfileMenuOpen(false);
                         onOpenProfile();
@@ -606,6 +631,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     {/* Portal Link */}
                     <button
+                      className={`navbar-profile-menu-link ${isCurrentOnPortal ? 'is-active' : ''}`}
+                      aria-current={isCurrentOnPortal ? 'page' : undefined}
                       onClick={handleCardClick}
                       style={{
                         width: '100%',
@@ -614,12 +641,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         justifyContent: 'space-between',
                         padding: '0.55rem 0.75rem',
                         borderRadius: 'var(--radius-sm)',
-                        background: isCurrentOnPortal
-                          ? 'var(--primary-light)'
-                          : 'transparent',
-                        color: isCurrentOnPortal
-                          ? 'var(--primary)'
-                          : 'var(--text-primary)',
+                        background: isCurrentOnPortal ? 'var(--primary-light)' : 'transparent',
+                        color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-primary)',
                         border: 'none',
                         fontSize: '0.82rem',
                         fontWeight: 600,
@@ -631,13 +654,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <LayoutDashboard size={15} color="var(--primary)" />
                         <span>{userPortalLabel}</span>
                       </div>
-                      {isCurrentOnPortal && (
-                        <CheckCircle2 size={14} color="var(--primary)" />
-                      )}
+                      {isCurrentOnPortal && <CheckCircle2 size={14} color="var(--primary)" />}
                     </button>
 
                     {/* Health Tracking Panel Link */}
                     <button
+                      className={`navbar-profile-menu-link ${isCurrentOnTracking ? 'is-active is-tracking' : ''}`}
+                      aria-current={isCurrentOnTracking ? 'page' : undefined}
                       onClick={() => {
                         onNavigate('tracking');
                         setProfileMenuOpen(false);
@@ -649,12 +672,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         justifyContent: 'space-between',
                         padding: '0.55rem 0.75rem',
                         borderRadius: 'var(--radius-sm)',
-                        background: isCurrentOnTracking
-                          ? 'rgba(239, 68, 68, 0.08)'
-                          : 'transparent',
-                        color: isCurrentOnTracking
-                          ? '#ef4444'
-                          : 'var(--text-primary)',
+                        background: isCurrentOnTracking ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                        color: isCurrentOnTracking ? '#ef4444' : 'var(--text-primary)',
                         border: 'none',
                         fontSize: '0.82rem',
                         fontWeight: 600,
@@ -666,13 +685,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <Activity size={15} color="#ef4444" />
                         <span>Health Tracking Panel</span>
                       </div>
-                      {isCurrentOnTracking && (
-                        <CheckCircle2 size={14} color="#ef4444" />
-                      )}
+                      {isCurrentOnTracking && <CheckCircle2 size={14} color="#ef4444" />}
                     </button>
 
                     {/* Directory Link */}
                     <button
+                      className="navbar-profile-menu-link"
                       onClick={() => {
                         onNavigate('directory');
                         setProfileMenuOpen(false);
@@ -699,6 +717,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     {/* Notifications Link */}
                     <button
+                      className="navbar-profile-menu-link"
                       onClick={() => {
                         onOpenNotifications();
                         setProfileMenuOpen(false);
@@ -739,43 +758,52 @@ export const Navbar: React.FC<NavbarProps> = ({
                       )}
                     </button>
 
-                    <div
-                      style={{
-                        height: '1px',
-                        background: 'var(--border)',
-                        margin: '0.4rem 0',
-                      }}
-                    />
+                    <div className="navbar-profile-menu-divider" />
 
                     {/* Switch Station */}
-                    <div style={{ padding: '0.3rem 0.75rem 0.5rem' }}>
-                      <div
-                        style={{
-                          fontSize: '0.67rem',
-                          fontWeight: 800,
-                          color: 'var(--text-muted)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.07em',
-                          marginBottom: '0.45rem',
-                        }}
-                      >
-                        Switch Station
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    <div className="navbar-role-section">
+                      <div className="navbar-role-section-title">Switch Station</div>
+                      <div className="navbar-role-switcher">
                         {(
                           [
-                            { role: 'ADMIN' as Role, label: 'Admin', emoji: '👑', color: '#7c3aed' },
-                            { role: 'DOCTOR' as Role, label: 'Doctor', emoji: '🩺', color: '#0284c7' },
-                            { role: 'NURSE' as Role, label: 'Nurse', emoji: '👩‍⚕️', color: '#059669' },
-                            { role: 'RECEPTIONIST' as Role, label: 'Reception', emoji: '📋', color: '#d97706' },
-                            { role: 'PHARMACIST' as Role, label: 'Pharmacy', emoji: '💊', color: '#2563eb' },
-                            { role: 'LABORATORY_STAFF' as Role, label: 'Lab', emoji: '🔬', color: '#db2777' },
+                            {
+                              role: 'DOCTOR' as Role,
+                              label: 'Doctor',
+                              emoji: '🩺',
+                              color: '#0284c7',
+                            },
+                            {
+                              role: 'NURSE' as Role,
+                              label: 'Nurse',
+                              emoji: '👩‍⚕️',
+                              color: '#059669',
+                            },
+                            {
+                              role: 'RECEPTIONIST' as Role,
+                              label: 'Reception',
+                              emoji: '📋',
+                              color: '#d97706',
+                            },
+                            {
+                              role: 'PHARMACIST' as Role,
+                              label: 'Pharmacy',
+                              emoji: '💊',
+                              color: '#2563eb',
+                            },
+                            {
+                              role: 'LABORATORY_STAFF' as Role,
+                              label: 'Lab',
+                              emoji: '🔬',
+                              color: '#db2777',
+                            },
                           ] as { role: Role; label: string; emoji: string; color: string }[]
                         ).map(({ role, label, emoji, color }) => {
                           const isActive = user.role === role;
                           return (
                             <button
                               key={role}
+                              className={`navbar-role-chip ${isActive ? 'is-active' : ''}`}
+                              aria-pressed={isActive}
                               onClick={() => {
                                 setProfileMenuOpen(false);
                                 quickLogin(role);
@@ -788,7 +816,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 fontSize: '0.73rem',
                                 fontWeight: 700,
                                 cursor: 'pointer',
-                                border: isActive ? `1.5px solid ${color}` : '1.5px solid transparent',
+                                border: isActive
+                                  ? `1.5px solid ${color}`
+                                  : '1.5px solid transparent',
                                 background: isActive ? `${color}18` : 'var(--bg-card-subtle)',
                                 color: isActive ? color : 'var(--text-secondary)',
                                 display: 'flex',
@@ -806,16 +836,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                     </div>
 
-                    <div
-                      style={{
-                        height: '1px',
-                        background: 'var(--border)',
-                        margin: '0.4rem 0',
-                      }}
-                    />
+                    <div className="navbar-profile-menu-divider" />
 
                     {/* Logout */}
                     <button
+                      className="navbar-profile-signout"
                       onClick={() => {
                         setProfileMenuOpen(false);
                         logout();
@@ -842,8 +867,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
               </div>
-
-
             </>
           ) : (
             <button onClick={onOpenAuth} className="btn btn-primary btn-sm desktop-auth-button">
@@ -875,14 +898,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="mobile-nav-drawer" role="navigation" aria-label="Mobile Navigation">
           <button
             type="button"
-            className={`mobile-nav-item ${currentView === 'directory' ? 'active' : ''}`}
+            className={`mobile-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
             onClick={() => {
-              onNavigate('directory');
+              onNavigate('dashboard');
               setMobileMenuOpen(false);
             }}
           >
-            <Stethoscope size={18} />
-            <span>Find Doctors</span>
+            <LayoutDashboard size={18} color="var(--primary)" />
+            <span>{user ? userPortalLabel : 'Hospital Management Portal'}</span>
           </button>
 
           {user && (
@@ -895,39 +918,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
             >
               <Activity size={18} color="#ef4444" />
-              <span>Health Tracking</span>
-            </button>
-          )}
-
-          {user?.role === 'PATIENT' && (
-            <button
-              type="button"
-              className={`mobile-nav-item ${currentView === 'patient' ? 'active' : ''}`}
-              onClick={() => {
-                onNavigate('patient');
-                setMobileMenuOpen(false);
-              }}
-            >
-              <User size={18} />
-              <span>My Appointments</span>
-            </button>
-          )}
-
-          {(!user || user?.role === 'DOCTOR' || user?.role === 'ADMIN') && (
-            <button
-              type="button"
-              className={`mobile-nav-item ${
-                currentView === 'staff' || currentView === 'doctor' || currentView === 'admin'
-                  ? 'active'
-                  : ''
-              }`}
-              onClick={() => {
-                onNavigate('staff');
-                setMobileMenuOpen(false);
-              }}
-            >
-              <BriefcaseMedical size={18} color="#00C2CB" />
-              <span>Doctor & Staff Hub</span>
+              <span>Inpatient Health Telemetry</span>
             </button>
           )}
 
@@ -962,12 +953,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {(
                     [
-                      { role: 'ADMIN' as Role, label: 'Admin', emoji: '👑', color: '#7c3aed' },
                       { role: 'DOCTOR' as Role, label: 'Doctor', emoji: '🩺', color: '#0284c7' },
                       { role: 'NURSE' as Role, label: 'Nurse', emoji: '👩‍⚕️', color: '#059669' },
-                      { role: 'RECEPTIONIST' as Role, label: 'Reception', emoji: '📋', color: '#d97706' },
-                      { role: 'PHARMACIST' as Role, label: 'Pharmacy', emoji: '💊', color: '#2563eb' },
-                      { role: 'LABORATORY_STAFF' as Role, label: 'Lab', emoji: '🔬', color: '#db2777' },
+                      {
+                        role: 'RECEPTIONIST' as Role,
+                        label: 'Reception',
+                        emoji: '📋',
+                        color: '#d97706',
+                      },
+                      {
+                        role: 'PHARMACIST' as Role,
+                        label: 'Pharmacy',
+                        emoji: '💊',
+                        color: '#2563eb',
+                      },
+                      {
+                        role: 'LABORATORY_STAFF' as Role,
+                        label: 'Lab',
+                        emoji: '🔬',
+                        color: '#db2777',
+                      },
                     ] as { role: Role; label: string; emoji: string; color: string }[]
                   ).map(({ role, label, emoji, color }) => {
                     const isActive = user.role === role;

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import type { Role, ShiftAssignmentDto, UserDto } from '@healthcare/shared';
 import {
   hospitalOperationsService,
   type DoctorRecord,
   type StaffRecord,
   type ScheduleEntryRecord,
 } from '../utils/hospitalOperationsService';
-import { DEPARTMENTS, WORKING_LOCATIONS, STAFF_TYPES, type Role } from '@healthcare/shared';
+import { DEPARTMENTS, WORKING_LOCATIONS, STAFF_TYPES } from '@healthcare/shared';
 import {
   Users,
   UserCheck,
@@ -17,7 +17,6 @@ import {
   Building,
   Search,
   Filter,
-  ShieldCheck,
   CheckCircle2,
   Calendar,
   Edit3,
@@ -27,21 +26,29 @@ import {
   Phone,
   Stethoscope,
   Radio,
+  AlertCircle,
 } from 'lucide-react';
+import { api } from '../api/client';
+import { ApiError } from '../api/client';
 
-export const AdminDashboardView: React.FC = () => {
-  const { user } = useAuth();
+type AdminRoleFilter =
+  'ALL' | 'DOCTOR' | 'NURSE' | 'RECEPTIONIST' | 'PHARMACIST' | 'LABORATORY_STAFF' | 'STAFF';
+
+export const AdminDashboardView: React.FC<{ initialRoleFilter?: AdminRoleFilter }> = ({
+  initialRoleFilter = 'ALL',
+}) => {
   const [activeTab, setActiveTab] = useState<'DIRECTORY' | 'SCHEDULE' | 'LOCATIONS'>('DIRECTORY');
 
   // Lists from operations service
   const [doctors, setDoctors] = useState<DoctorRecord[]>([]);
   const [staff, setStaff] = useState<StaffRecord[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<UserDto[]>([]);
   const [schedule, setSchedule] = useState<ScheduleEntryRecord[]>([]);
   const [overview, setOverview] = useState(hospitalOperationsService.getHospitalOverview());
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'DOCTOR' | 'NURSE' | 'RECEPTIONIST' | 'PHARMACIST' | 'LABORATORY_STAFF' | 'STAFF'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<AdminRoleFilter>(initialRoleFilter);
   const [deptFilter, setDeptFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [locationFilter, setLocationFilter] = useState<string>('ALL');
@@ -49,10 +56,26 @@ export const AdminDashboardView: React.FC = () => {
   // Modals
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [oneTimeCredential, setOneTimeCredential] = useState<{
+    name: string;
+    email: string;
+    temporaryPassword: string;
+    role: string;
+  } | null>(null);
+
+  // Clear temporary credential on unmount so it is never displayed after leaving the page
+  useEffect(() => {
+    return () => {
+      setOneTimeCredential(null);
+    };
+  }, []);
   const [selectedPersonForShift, setSelectedPersonForShift] = useState<{
     id: number;
+    userId?: number;
     name: string;
+    email: string;
     isDoctor: boolean;
+    isServerAccount: boolean;
     currentShift: string;
     currentHours: string;
     currentBreak: string;
@@ -78,7 +101,9 @@ export const AdminDashboardView: React.FC = () => {
 
   // Form states - Add Doctor
   const [docName, setDocName] = useState('');
-  const [docPhoto, _setDocPhoto] = useState('https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400');
+  const [docPhoto, _setDocPhoto] = useState(
+    'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
+  );
   const [docEmpId, setDocEmpId] = useState('');
   const [docPhone, setDocPhone] = useState('+91 98200 ');
   const [docEmail, setDocEmail] = useState('');
@@ -86,7 +111,9 @@ export const AdminDashboardView: React.FC = () => {
   const [docSpec, setDocSpec] = useState('');
   const [docQual, setDocQual] = useState('MBBS, MD');
   const [docExp, setDocExp] = useState('8+ Years');
-  const [docShiftPreset, setDocShiftPreset] = useState<'Morning' | 'Evening' | 'Night' | 'Custom'>('Morning');
+  const [docShiftPreset, setDocShiftPreset] = useState<'Morning' | 'Evening' | 'Night' | 'Custom'>(
+    'Morning',
+  );
   const [docShiftHours, setDocShiftHours] = useState('08:00 AM – 02:00 PM');
   const [docBreak, setDocBreak] = useState('12:30 PM - 01:00 PM');
   const [docDays, _setDocDays] = useState('Mon - Sat');
@@ -99,9 +126,12 @@ export const AdminDashboardView: React.FC = () => {
   const [stfEmpId, setStfEmpId] = useState('');
   const [stfPhone, setStfPhone] = useState('+91 98300 ');
   const [stfEmail, setStfEmail] = useState('');
-  const [stfType, setStfType] = useState<typeof STAFF_TYPES[number]>('Nurse');
+  const [stfPassword, setStfPassword] = useState('');
+  const [stfType, setStfType] = useState<(typeof STAFF_TYPES)[number]>('Nurse');
   const [stfDept, setStfDept] = useState<string>(DEPARTMENTS[0]);
-  const [stfShiftPreset, setStfShiftPreset] = useState<'Morning' | 'Evening' | 'Night' | 'Custom'>('Morning');
+  const [stfShiftPreset, setStfShiftPreset] = useState<'Morning' | 'Evening' | 'Night' | 'Custom'>(
+    'Morning',
+  );
   const [stfShiftHours, setStfShiftHours] = useState('08:00 AM – 04:00 PM');
   const [stfBreak, setStfBreak] = useState('01:00 PM - 01:30 PM');
   const [stfDays, _setStfDays] = useState('Mon - Fri');
@@ -119,6 +149,12 @@ export const AdminDashboardView: React.FC = () => {
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastIsError, setToastIsError] = useState(false);
+  const [isSavingShift, setIsSavingShift] = useState(false);
+  const [isCreatingStaff, setIsCreatingStaff] = useState(false);
+  const [shiftAssignments, setShiftAssignments] = useState<Record<string, ShiftAssignmentDto>>({});
+  const [shiftSyncError, setShiftSyncError] = useState<string | null>(null);
+  const [directorySyncError, setDirectorySyncError] = useState<string | null>(null);
 
   const loadData = () => {
     setDoctors(hospitalOperationsService.getDoctors());
@@ -127,15 +163,93 @@ export const AdminDashboardView: React.FC = () => {
     setOverview(hospitalOperationsService.getHospitalOverview());
   };
 
+  const handleToggleRegisteredUserStatus = async (person: CombinedPerson) => {
+    if (!person.userId) {
+      showToast('This account is not available in the server directory.', true);
+      return;
+    }
+    const nextStatus = person.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      const updated = await api.updateAdminUserStatus(person.userId, nextStatus);
+      setRegisteredUsers((current) =>
+        current.map((account) => (account.id === updated.id ? updated : account)),
+      );
+      showToast(`${person.name} is now ${nextStatus}.`);
+    } catch (error) {
+      showToast(
+        error instanceof ApiError ? error.message : 'Could not update the account status.',
+        true,
+      );
+    }
+  };
+
   useEffect(() => {
     loadData();
-    const handleUpdate = () => loadData();
+    let mounted = true;
+    let loadingAssignments = false;
+    const loadUsers = async () => {
+      try {
+        const users = await api.getAllAdminUsers();
+        if (mounted) {
+          setRegisteredUsers(users);
+          setDirectorySyncError(null);
+        }
+      } catch (error) {
+        if (mounted) {
+          setDirectorySyncError(
+            error instanceof ApiError ? error.message : 'Could not load registered staff accounts.',
+          );
+        }
+      }
+    };
+    const loadAssignments = async () => {
+      if (loadingAssignments || document.visibilityState !== 'visible') return;
+      loadingAssignments = true;
+      try {
+        const assignments = await api.getAdminShiftAssignments();
+        if (mounted) {
+          setShiftAssignments(
+            Object.fromEntries(
+              assignments.map((assignment) => [assignment.targetEmail, assignment]),
+            ),
+          );
+          setShiftSyncError(null);
+        }
+      } catch (error) {
+        if (mounted) {
+          setShiftSyncError(
+            error instanceof ApiError
+              ? error.message
+              : 'Could not synchronize staff shift assignments.',
+          );
+        }
+      } finally {
+        loadingAssignments = false;
+      }
+    };
+    const handleUpdate = () => {
+      loadData();
+      void loadAssignments();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void loadAssignments();
+    };
+    void loadUsers();
+    void loadAssignments();
+    const interval = window.setInterval(() => void loadAssignments(), 10_000);
     window.addEventListener('niramaya:hospital-operations-updated', handleUpdate);
-    return () => window.removeEventListener('niramaya:hospital-operations-updated', handleUpdate);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+      window.removeEventListener('niramaya:hospital-operations-updated', handleUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, isError = false) => {
     setToastMessage(msg);
+    setToastIsError(isError);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
@@ -171,115 +285,223 @@ export const AdminDashboardView: React.FC = () => {
   const handleShiftModalPresetChange = (preset: string) => {
     setShiftNameInput(preset);
     if (preset === 'Morning') {
-      setShiftHoursInput(selectedPersonForShift?.isDoctor ? '08:00 AM – 02:00 PM' : '08:00 AM – 04:00 PM');
+      setShiftHoursInput(
+        selectedPersonForShift?.isDoctor ? '08:00 AM – 02:00 PM' : '08:00 AM – 04:00 PM',
+      );
       setBreakTimeInput('12:30 PM - 01:00 PM');
     } else if (preset === 'Evening') {
-      setShiftHoursInput(selectedPersonForShift?.isDoctor ? '02:00 PM – 08:00 PM' : '04:00 PM – 12:00 AM');
+      setShiftHoursInput(
+        selectedPersonForShift?.isDoctor ? '02:00 PM – 08:00 PM' : '04:00 PM – 12:00 AM',
+      );
       setBreakTimeInput('05:30 PM - 06:00 PM');
     } else if (preset === 'Night') {
-      setShiftHoursInput(selectedPersonForShift?.isDoctor ? '08:00 PM – 08:00 AM' : '12:00 AM – 08:00 AM');
+      setShiftHoursInput(
+        selectedPersonForShift?.isDoctor ? '08:00 PM – 08:00 AM' : '12:00 AM – 08:00 AM',
+      );
       setBreakTimeInput('02:00 AM - 02:45 AM');
     }
   };
 
   // Submit Add Doctor
-  const handleCreateDoctor = (e: React.FormEvent) => {
+  const handleCreateDoctor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!docName.trim() || !docEmail.trim()) {
-      showToast('Please provide Doctor Name and Email.');
+      showToast('Please provide Doctor Name and Email.', true);
       return;
     }
     const empId = docEmpId.trim() || `DOC-00${doctors.length + 1}`;
-    hospitalOperationsService.addDoctor({
-      name: docName.trim(),
-      avatarUrl: docPhoto,
-      employeeId: empId,
-      phone: docPhone.trim(),
-      email: docEmail.trim(),
-      department: docDept,
-      specialization: docSpec.trim() || `${docDept} Specialist`,
-      qualification: docQual.trim(),
-      experience: docExp.trim(),
-      todayShift: docShiftPreset === 'Custom' ? 'Custom Shift' : `${docShiftPreset} Shift`,
-      shiftHours: docShiftHours,
-      breakTime: docBreak,
-      workingDays: docDays,
-      workingLocation: docLoc,
-      roomNumber: docRoom.trim(),
-      nextShift: 'Tomorrow – Same Shift',
-      status: docStatus,
-    });
-    showToast(`Doctor ${docName.trim()} created successfully.`);
-    setShowAddDoctorModal(false);
-    // Reset form
-    setDocName('');
-    setDocEmpId('');
-    setDocEmail('');
-    setDocSpec('');
-    loadData();
+    try {
+      const created = await api.createAdminUser({
+        name: docName.trim(),
+        email: docEmail.trim(),
+        role: 'DOCTOR',
+        specialization: docSpec.trim() || `${docDept} Specialist`,
+        department: docDept,
+        phone: docPhone.trim(),
+      });
+      hospitalOperationsService.addDoctor({
+        name: docName.trim(),
+        avatarUrl: docPhoto,
+        employeeId: empId,
+        phone: docPhone.trim(),
+        email: docEmail.trim(),
+        department: docDept,
+        specialization: docSpec.trim() || `${docDept} Specialist`,
+        qualification: docQual.trim(),
+        experience: docExp.trim(),
+        todayShift: docShiftPreset === 'Custom' ? 'Custom Shift' : `${docShiftPreset} Shift`,
+        shiftHours: docShiftHours,
+        breakTime: docBreak,
+        workingDays: docDays,
+        workingLocation: docLoc,
+        roomNumber: docRoom.trim(),
+        nextShift: 'Tomorrow – Same Shift',
+        status: docStatus,
+      });
+      setShowAddDoctorModal(false);
+      setDocName('');
+      setDocEmpId('');
+      setDocEmail('');
+      setDocSpec('');
+      showToast('User created successfully. User must change password on first login.');
+      if (created.temporaryPassword) {
+        setOneTimeCredential({
+          name: docName.trim(),
+          email: docEmail.trim(),
+          temporaryPassword: created.temporaryPassword,
+          role: 'DOCTOR',
+        });
+      }
+      loadData();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not create the doctor account. Please try again.',
+        true,
+      );
+    }
   };
 
   // Submit Add Staff
-  const handleCreateStaff = (e: React.FormEvent) => {
+  const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stfName.trim() || !stfEmail.trim()) {
-      showToast('Please provide Staff Name and Email.');
+      showToast('Please provide the staff name and email.', true);
+      return;
+    }
+    if (stfPassword && (stfPassword.length < 8 || !/[A-Za-z]/.test(stfPassword) || !/\d/.test(stfPassword))) {
+      showToast(
+        'Password must be at least 8 characters and include a letter and a number.',
+        true,
+      );
       return;
     }
     const empId = stfEmpId.trim() || `STF-00${staff.length + 1}`;
-    let roleVal: Role = 'STAFF';
+    let roleVal: 'STAFF' | 'NURSE' | 'RECEPTIONIST' | 'PHARMACIST' | 'LABORATORY_STAFF' = 'STAFF';
     if (stfType === 'Nurse') roleVal = 'NURSE';
     else if (stfType === 'Receptionist') roleVal = 'RECEPTIONIST';
     else if (stfType === 'Pharmacist') roleVal = 'PHARMACIST';
     else if (stfType === 'Laboratory Staff') roleVal = 'LABORATORY_STAFF';
 
-    hospitalOperationsService.addStaff({
-      name: stfName.trim(),
-      avatarUrl: null,
-      employeeId: empId,
-      phone: stfPhone.trim(),
-      email: stfEmail.trim(),
-      staffType: stfType,
-      role: roleVal,
-      department: stfDept,
-      todayShift: stfShiftPreset === 'Custom' ? 'Custom Shift' : `${stfShiftPreset} Shift`,
-      shiftHours: stfShiftHours,
-      breakTime: stfBreak,
-      workingDays: stfDays,
-      workingLocation: stfLoc,
-      assignedArea: stfArea.trim(),
-      nextShift: 'Tomorrow – Same Shift',
-      status: stfStatus,
-    });
-    showToast(`Staff member ${stfName.trim()} created successfully.`);
-    setShowAddStaffModal(false);
-    // Reset form
-    setStfName('');
-    setStfEmpId('');
-    setStfEmail('');
-    loadData();
+    setIsCreatingStaff(true);
+    try {
+      const created = await api.createStaffAccount({
+        name: stfName.trim(),
+        email: stfEmail.trim(),
+        password: stfPassword || undefined,
+        role: roleVal,
+        shiftAssignment: {
+          shiftName: stfShiftPreset === 'Custom' ? 'Custom Shift' : `${stfShiftPreset} Shift`,
+          shiftHours: stfShiftHours,
+          breakTime: stfBreak,
+          workingDays: stfDays,
+          workingLocation: stfLoc,
+          roomArea: stfArea.trim(),
+        },
+      });
+      const tempPass = created.temporaryPassword || stfPassword;
+      hospitalOperationsService.addStaff({
+        name: stfName.trim(),
+        avatarUrl: null,
+        employeeId: empId,
+        phone: stfPhone.trim(),
+        email: created.user.email,
+        staffType: stfType,
+        role: roleVal,
+        department: stfDept,
+        todayShift: created.shiftAssignment.shiftName,
+        shiftHours: created.shiftAssignment.shiftHours,
+        breakTime: created.shiftAssignment.breakTime,
+        workingDays: created.shiftAssignment.workingDays,
+        workingLocation: created.shiftAssignment.workingLocation,
+        assignedArea: created.shiftAssignment.roomArea,
+        nextShift: 'Tomorrow – Same Shift',
+        status: stfStatus,
+      });
+      setShiftAssignments((current) => ({
+        ...current,
+        [created.shiftAssignment.targetEmail]: created.shiftAssignment,
+      }));
+      setRegisteredUsers((current) => [
+        created.user,
+        ...current.filter((user) => user.id !== created.user.id),
+      ]);
+      setShowAddStaffModal(false);
+      setStfName('');
+      setStfEmpId('');
+      setStfEmail('');
+      setStfPassword('');
+      showToast('User created successfully. User must change password on first login.');
+      if (tempPass) {
+        setOneTimeCredential({
+          name: stfName.trim(),
+          email: created.user.email,
+          temporaryPassword: tempPass,
+          role: roleVal,
+        });
+      }
+      loadData();
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not create the staff account. Please try again.',
+        true,
+      );
+    } finally {
+      setIsCreatingStaff(false);
+    }
   };
 
   // Submit Shift & Location Assignment
-  const handleSaveShiftAssignment = (e: React.FormEvent) => {
+  const handleSaveShiftAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPersonForShift) return;
-    hospitalOperationsService.assignShiftAndLocation(
-      selectedPersonForShift.id,
-      selectedPersonForShift.isDoctor,
-      {
-        shiftName: shiftNameInput.includes('Shift') ? shiftNameInput : `${shiftNameInput} Shift`,
-        shiftHours: shiftHoursInput,
-        breakTime: breakTimeInput,
-        workingDays: workingDaysInput,
-        workingLocation: workingLocInput,
-        roomOrArea: roomAreaInput,
+    const assignment = {
+      targetEmail: selectedPersonForShift.email,
+      shiftName: shiftNameInput.includes('Shift') ? shiftNameInput : `${shiftNameInput} Shift`,
+      shiftHours: shiftHoursInput,
+      breakTime: breakTimeInput,
+      workingDays: workingDaysInput,
+      workingLocation: workingLocInput,
+      roomArea: roomAreaInput,
+    };
+    setIsSavingShift(true);
+    try {
+      const savedAssignment = await api.saveShiftAssignment(assignment);
+      setShiftAssignments((current) => ({
+        ...current,
+        [savedAssignment.targetEmail]: savedAssignment,
+      }));
+      if (!selectedPersonForShift.isServerAccount) {
+        hospitalOperationsService.assignShiftAndLocation(
+          selectedPersonForShift.id,
+          selectedPersonForShift.isDoctor,
+          {
+            shiftName: savedAssignment.shiftName,
+            shiftHours: savedAssignment.shiftHours,
+            breakTime: savedAssignment.breakTime,
+            workingDays: savedAssignment.workingDays,
+            workingLocation: savedAssignment.workingLocation,
+            roomOrArea: savedAssignment.roomArea,
+          },
+        );
       }
-    );
-
-    showToast(`Shift & Location updated for ${selectedPersonForShift.name}. Device alert dispatched.`);
-    setSelectedPersonForShift(null);
-    loadData();
+      showToast(
+        `Shift & location saved for ${selectedPersonForShift.name}. Their dashboard will update automatically.`,
+      );
+      setSelectedPersonForShift(null);
+    } catch (error) {
+      showToast(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not save the shift assignment. Please try again.',
+        true,
+      );
+    } finally {
+      setIsSavingShift(false);
+    }
   };
 
   // Submit Profile Edit
@@ -312,7 +534,12 @@ export const AdminDashboardView: React.FC = () => {
   };
 
   // Toggle status
-  const handleToggleStatus = (id: number, isDoctor: boolean, currentStatus: string, name: string) => {
+  const handleToggleStatus = (
+    id: number,
+    isDoctor: boolean,
+    currentStatus: string,
+    name: string,
+  ) => {
     if (isDoctor) {
       hospitalOperationsService.toggleDoctorStatus(id);
     } else {
@@ -326,6 +553,7 @@ export const AdminDashboardView: React.FC = () => {
   // Filter combined directory
   interface CombinedPerson {
     id: number;
+    userId?: number;
     name: string;
     avatarUrl: string | null;
     employeeId: string;
@@ -342,15 +570,71 @@ export const AdminDashboardView: React.FC = () => {
     roomOrArea: string;
     status: 'ACTIVE' | 'INACTIVE';
     isDoctor: boolean;
+    isServerAccount: boolean;
     specialization?: string;
     qualification?: string;
     experience?: string;
     staffType?: string;
   }
 
+  const localEmployeeEmails = new Set(
+    [...doctors.map((doctor) => doctor.email), ...staff.map((member) => member.email)].map(
+      (email) => email.toLowerCase(),
+    ),
+  );
+  const roleLabels: Partial<Record<Role, string>> = {
+    DOCTOR: 'Doctor',
+    STAFF: 'Administrative Staff',
+    NURSE: 'Nurse',
+    RECEPTIONIST: 'Receptionist',
+    PHARMACIST: 'Pharmacist',
+    LABORATORY_STAFF: 'Laboratory Staff',
+  };
+  const registeredEmployeeDirectory = registeredUsers
+    .filter(
+      (account) =>
+        account.role === 'DOCTOR' ||
+        account.role === 'STAFF' ||
+        account.role === 'NURSE' ||
+        account.role === 'RECEPTIONIST' ||
+        account.role === 'PHARMACIST' ||
+        account.role === 'LABORATORY_STAFF',
+    )
+    .filter((account) => !localEmployeeEmails.has(account.email.toLowerCase()))
+    .map((account): CombinedPerson => {
+      const assignment = shiftAssignments[account.email.toLowerCase()];
+      const isDoctor = account.role === 'DOCTOR';
+      return {
+        id: -account.id,
+        userId: account.id,
+        name: account.name,
+        avatarUrl: account.avatarUrl,
+        employeeId: `ACC-${account.id}`,
+        phone: '—',
+        email: account.email,
+        role: account.role,
+        displayRole: roleLabels[account.role] ?? 'Staff',
+        department: 'Unassigned',
+        todayShift: assignment?.shiftName ?? 'Unassigned Shift',
+        shiftHours: assignment?.shiftHours ?? 'Not assigned',
+        breakTime: assignment?.breakTime ?? 'Not assigned',
+        workingDays: assignment?.workingDays ?? 'Not assigned',
+        workingLocation: assignment?.workingLocation ?? WORKING_LOCATIONS[0],
+        roomOrArea: assignment?.roomArea ?? 'Unassigned',
+        status: account.status,
+        isDoctor,
+        isServerAccount: true,
+        specialization: isDoctor ? 'Doctor account' : undefined,
+        staffType: isDoctor ? undefined : roleLabels[account.role],
+      };
+    });
+
   const combinedDirectory: CombinedPerson[] = [
     ...doctors.map((d) => ({
       id: d.id,
+      userId: registeredUsers.find(
+        (account) => account.email.toLowerCase() === d.email.toLowerCase(),
+      )?.id,
       name: d.name,
       avatarUrl: d.avatarUrl,
       employeeId: d.employeeId,
@@ -359,20 +643,29 @@ export const AdminDashboardView: React.FC = () => {
       role: 'DOCTOR' as Role,
       displayRole: 'Doctor',
       department: d.department,
-      todayShift: d.todayShift,
-      shiftHours: d.shiftHours,
-      breakTime: d.breakTime,
-      workingDays: d.workingDays,
-      workingLocation: d.workingLocation,
-      roomOrArea: d.roomNumber,
-      status: d.status,
+      todayShift: shiftAssignments[d.email.toLowerCase()]?.shiftName ?? d.todayShift,
+      shiftHours: shiftAssignments[d.email.toLowerCase()]?.shiftHours ?? d.shiftHours,
+      breakTime: shiftAssignments[d.email.toLowerCase()]?.breakTime ?? d.breakTime,
+      workingDays: shiftAssignments[d.email.toLowerCase()]?.workingDays ?? d.workingDays,
+      workingLocation:
+        shiftAssignments[d.email.toLowerCase()]?.workingLocation ?? d.workingLocation,
+      roomOrArea: shiftAssignments[d.email.toLowerCase()]?.roomArea ?? d.roomNumber,
+      status:
+        registeredUsers.find((account) => account.email.toLowerCase() === d.email.toLowerCase())
+          ?.status ?? d.status,
       isDoctor: true,
+      isServerAccount: registeredUsers.some(
+        (account) => account.email.toLowerCase() === d.email.toLowerCase(),
+      ),
       specialization: d.specialization,
       qualification: d.qualification,
       experience: d.experience,
     })),
     ...staff.map((s) => ({
       id: s.id,
+      userId: registeredUsers.find(
+        (account) => account.email.toLowerCase() === s.email.toLowerCase(),
+      )?.id,
       name: s.name,
       avatarUrl: s.avatarUrl,
       employeeId: s.employeeId,
@@ -381,16 +674,23 @@ export const AdminDashboardView: React.FC = () => {
       role: s.role,
       displayRole: s.staffType,
       department: s.department,
-      todayShift: s.todayShift,
-      shiftHours: s.shiftHours,
-      breakTime: s.breakTime,
-      workingDays: s.workingDays,
-      workingLocation: s.workingLocation,
-      roomOrArea: s.assignedArea,
-      status: s.status,
+      todayShift: shiftAssignments[s.email.toLowerCase()]?.shiftName ?? s.todayShift,
+      shiftHours: shiftAssignments[s.email.toLowerCase()]?.shiftHours ?? s.shiftHours,
+      breakTime: shiftAssignments[s.email.toLowerCase()]?.breakTime ?? s.breakTime,
+      workingDays: shiftAssignments[s.email.toLowerCase()]?.workingDays ?? s.workingDays,
+      workingLocation:
+        shiftAssignments[s.email.toLowerCase()]?.workingLocation ?? s.workingLocation,
+      roomOrArea: shiftAssignments[s.email.toLowerCase()]?.roomArea ?? s.assignedArea,
+      status:
+        registeredUsers.find((account) => account.email.toLowerCase() === s.email.toLowerCase())
+          ?.status ?? s.status,
       isDoctor: false,
+      isServerAccount: registeredUsers.some(
+        (account) => account.email.toLowerCase() === s.email.toLowerCase(),
+      ),
       staffType: s.staffType,
     })),
+    ...registeredEmployeeDirectory,
   ];
 
   const filteredDirectory = combinedDirectory.filter((person) => {
@@ -398,7 +698,8 @@ export const AdminDashboardView: React.FC = () => {
       person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       person.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (person.specialization && person.specialization.toLowerCase().includes(searchTerm.toLowerCase()));
+      (person.specialization &&
+        person.specialization.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesRole =
       roleFilter === 'ALL' ||
@@ -418,10 +719,27 @@ export const AdminDashboardView: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+      {(shiftSyncError || directorySyncError) && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: '1.25rem',
+            padding: '0.8rem 1rem',
+            border: '1px solid #fecaca',
+            borderRadius: '0.65rem',
+            background: '#fef2f2',
+            color: '#991b1b',
+            fontSize: '0.85rem',
+          }}
+        >
+          Staff directory/shift synchronization issue: {directorySyncError ?? shiftSyncError}
+        </div>
+      )}
       {/* ─── Top Admin Header & Security Notice ────────────────────────────── */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+          background:
+            'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
           color: '#ffffff',
           borderRadius: '1.25rem',
           padding: '1.75rem 2rem',
@@ -435,11 +753,27 @@ export const AdminDashboardView: React.FC = () => {
         }}
       >
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#ffffff' }}>
+          <h1
+            style={{
+              fontSize: '2rem',
+              fontWeight: 800,
+              margin: 0,
+              letterSpacing: '-0.02em',
+              color: '#ffffff',
+            }}
+          >
             Administrator Operations Center
           </h1>
-          <p style={{ margin: '0.35rem 0 0', color: '#94a3b8', fontSize: '0.9rem', maxWidth: '780px' }}>
-            Centralized role-based authority: manage all Doctor & Staff accounts, define working shifts, assign hospital locations, and monitor 24/7 institutional operations.
+          <p
+            style={{
+              margin: '0.35rem 0 0',
+              color: '#94a3b8',
+              fontSize: '0.9rem',
+              maxWidth: '780px',
+            }}
+          >
+            Centralized role-based authority: manage all Doctor & Staff accounts, define working
+            shifts, assign hospital locations, and monitor 24/7 institutional operations.
           </p>
         </div>
 
@@ -526,13 +860,29 @@ export const AdminDashboardView: React.FC = () => {
             <Stethoscope size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
               Total Doctors
             </div>
-            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            <div
+              style={{
+                fontSize: '1.65rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+              }}
+            >
               {overview.totalDoctors}
             </div>
-            <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600, marginTop: '2px' }}>
+            <div
+              style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600, marginTop: '2px' }}
+            >
               All Board Certified
             </div>
           </div>
@@ -566,13 +916,34 @@ export const AdminDashboardView: React.FC = () => {
             <Users size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
               Total Staff
             </div>
-            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            <div
+              style={{
+                fontSize: '1.65rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+              }}
+            >
               {overview.totalStaff}
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '2px' }}>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                marginTop: '2px',
+              }}
+            >
               Nurses, Reception, Lab, Rx
             </div>
           </div>
@@ -606,13 +977,29 @@ export const AdminDashboardView: React.FC = () => {
             <UserCheck size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
               On-Duty Personnel
             </div>
-            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#10b981', lineHeight: 1.1 }}>
+            <div
+              style={{ fontSize: '1.65rem', fontWeight: 800, color: '#10b981', lineHeight: 1.1 }}
+            >
               {overview.onDutyStaff}
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '2px' }}>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                marginTop: '2px',
+              }}
+            >
               Active on floor right now
             </div>
           </div>
@@ -646,13 +1033,34 @@ export const AdminDashboardView: React.FC = () => {
             <Clock size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
               Active Shifts
             </div>
-            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            <div
+              style={{
+                fontSize: '1.65rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+              }}
+            >
               {overview.currentShifts}
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '2px' }}>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                marginTop: '2px',
+              }}
+            >
               Morning, Evening, Night
             </div>
           </div>
@@ -686,13 +1094,34 @@ export const AdminDashboardView: React.FC = () => {
             <Building size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
               Depts & Locations
             </div>
-            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            <div
+              style={{
+                fontSize: '1.65rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+              }}
+            >
               {overview.departments} / {overview.workingLocations}
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '2px' }}>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                marginTop: '2px',
+              }}
+            >
               Full facility coverage
             </div>
           </div>
@@ -726,13 +1155,34 @@ export const AdminDashboardView: React.FC = () => {
             <Activity size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
               Today's Patients
             </div>
-            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+            <div
+              style={{
+                fontSize: '1.65rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.1,
+              }}
+            >
               {overview.patientCount}
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600, marginTop: '2px' }}>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 600,
+                marginTop: '2px',
+              }}
+            >
               {overview.todayAppointments} queue appointments
             </div>
           </div>
@@ -742,15 +1192,18 @@ export const AdminDashboardView: React.FC = () => {
       {/* ─── Navigation Tabs ──────────────────────────────────────────────── */}
       <div
         className="dash-tab-bar"
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: '1.5rem',
-          overflowX: 'auto',
-          paddingBottom: '0.25rem',
-          WebkitOverflowScrolling: 'touch' as unknown as React.CSSProperties['WebkitOverflowScrolling'],
-        } as React.CSSProperties}
+        style={
+          {
+            display: 'flex',
+            gap: '0.5rem',
+            borderBottom: '1px solid var(--border)',
+            marginBottom: '1.5rem',
+            overflowX: 'auto',
+            paddingBottom: '0.25rem',
+            WebkitOverflowScrolling:
+              'touch' as unknown as React.CSSProperties['WebkitOverflowScrolling'],
+          } as React.CSSProperties
+        }
       >
         <button
           onClick={() => setActiveTab('DIRECTORY')}
@@ -830,8 +1283,14 @@ export const AdminDashboardView: React.FC = () => {
               gap: '1rem',
             }}
           >
-            <div className="admin-action-bar" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div className="admin-search-field" style={{ flex: '1 1 280px', position: 'relative' }}>
+            <div
+              className="admin-action-bar"
+              style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}
+            >
+              <div
+                className="admin-search-field"
+                style={{ flex: '1 1 280px', position: 'relative' }}
+              >
                 <Search
                   size={18}
                   style={{
@@ -866,7 +1325,14 @@ export const AdminDashboardView: React.FC = () => {
                   value={roleFilter}
                   onChange={(e) =>
                     setRoleFilter(
-                      e.target.value as 'ALL' | 'DOCTOR' | 'NURSE' | 'RECEPTIONIST' | 'PHARMACIST' | 'LABORATORY_STAFF' | 'STAFF'
+                      e.target.value as
+                        | 'ALL'
+                        | 'DOCTOR'
+                        | 'NURSE'
+                        | 'RECEPTIONIST'
+                        | 'PHARMACIST'
+                        | 'LABORATORY_STAFF'
+                        | 'STAFF',
                     )
                   }
                   style={{
@@ -965,7 +1431,14 @@ export const AdminDashboardView: React.FC = () => {
             }}
           >
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', textAlign: 'left' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.86rem',
+                  textAlign: 'left',
+                }}
+              >
                 <thead>
                   <tr
                     style={{
@@ -988,7 +1461,10 @@ export const AdminDashboardView: React.FC = () => {
                 <tbody>
                   {filteredDirectory.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <td
+                        colSpan={6}
+                        style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}
+                      >
                         No personnel match the selected criteria.
                       </td>
                     </tr>
@@ -1024,7 +1500,9 @@ export const AdminDashboardView: React.FC = () => {
                                     width: '42px',
                                     height: '42px',
                                     borderRadius: '10px',
-                                    background: isDoctor ? 'rgba(2, 132, 199, 0.15)' : 'rgba(13, 148, 136, 0.15)',
+                                    background: isDoctor
+                                      ? 'rgba(2, 132, 199, 0.15)'
+                                      : 'rgba(13, 148, 136, 0.15)',
                                     color: isDoctor ? '#0284c7' : '#0d9488',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1037,14 +1515,33 @@ export const AdminDashboardView: React.FC = () => {
                                 </div>
                               )}
                               <div>
-                                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>
+                                <div
+                                  style={{
+                                    fontWeight: 700,
+                                    color: 'var(--text-primary)',
+                                    fontSize: '0.92rem',
+                                  }}
+                                >
                                   {person.name}
                                 </div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                  ID: <strong style={{ color: 'var(--text-secondary)' }}>{person.employeeId}</strong> · {person.email}
+                                  ID:{' '}
+                                  <strong style={{ color: 'var(--text-secondary)' }}>
+                                    {person.employeeId}
+                                  </strong>{' '}
+                                  · {person.email}
                                 </div>
-                                <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  <Phone size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                                <div
+                                  style={{
+                                    fontSize: '0.73rem',
+                                    color: 'var(--text-muted)',
+                                    marginTop: '2px',
+                                  }}
+                                >
+                                  <Phone
+                                    size={11}
+                                    style={{ display: 'inline', marginRight: '3px' }}
+                                  />
                                   {person.phone}
                                 </div>
                               </div>
@@ -1053,10 +1550,19 @@ export const AdminDashboardView: React.FC = () => {
 
                           {/* Role & Dept */}
                           <td style={{ padding: '1rem' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '3px' }}>
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                marginBottom: '3px',
+                              }}
+                            >
                               <span
                                 style={{
-                                  background: isDoctor ? 'rgba(2, 132, 199, 0.12)' : 'rgba(13, 148, 136, 0.12)',
+                                  background: isDoctor
+                                    ? 'rgba(2, 132, 199, 0.12)'
+                                    : 'rgba(13, 148, 136, 0.12)',
                                   color: isDoctor ? '#0284c7' : '#0d9488',
                                   padding: '0.15rem 0.55rem',
                                   borderRadius: '6px',
@@ -1067,7 +1573,13 @@ export const AdminDashboardView: React.FC = () => {
                                 {person.displayRole}
                               </span>
                             </div>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.84rem' }}>
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                color: 'var(--text-primary)',
+                                fontSize: '0.84rem',
+                              }}
+                            >
                               {person.department}
                             </div>
                             {person.specialization && (
@@ -1079,11 +1591,25 @@ export const AdminDashboardView: React.FC = () => {
 
                           {/* Shift */}
                           <td style={{ padding: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                              }}
+                            >
                               <Clock size={14} style={{ color: '#0284c7' }} />
                               {person.todayShift}
                             </div>
-                            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            <div
+                              style={{
+                                fontSize: '0.76rem',
+                                color: 'var(--text-secondary)',
+                                marginTop: '2px',
+                              }}
+                            >
                               {person.shiftHours}
                             </div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -1093,11 +1619,25 @@ export const AdminDashboardView: React.FC = () => {
 
                           {/* Location & Room */}
                           <td style={{ padding: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                              }}
+                            >
                               <MapPin size={14} style={{ color: '#e11d48' }} />
                               {person.workingLocation}
                             </div>
-                            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            <div
+                              style={{
+                                fontSize: '0.76rem',
+                                color: 'var(--text-secondary)',
+                                marginTop: '2px',
+                              }}
+                            >
                               {person.roomOrArea}
                             </div>
                           </td>
@@ -1106,7 +1646,10 @@ export const AdminDashboardView: React.FC = () => {
                           <td style={{ padding: '1rem' }}>
                             <span
                               style={{
-                                background: person.status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                background:
+                                  person.status === 'ACTIVE'
+                                    ? 'rgba(16, 185, 129, 0.12)'
+                                    : 'rgba(239, 68, 68, 0.12)',
                                 color: person.status === 'ACTIVE' ? '#10b981' : '#ef4444',
                                 padding: '0.2rem 0.65rem',
                                 borderRadius: '999px',
@@ -1117,21 +1660,34 @@ export const AdminDashboardView: React.FC = () => {
                                 gap: '0.3rem',
                               }}
                             >
-                              {person.status === 'ACTIVE' ? <CheckCircle2 size={12} /> : <UserX size={12} />}
+                              {person.status === 'ACTIVE' ? (
+                                <CheckCircle2 size={12} />
+                              ) : (
+                                <UserX size={12} />
+                              )}
                               {person.status}
                             </span>
                           </td>
 
                           {/* Actions */}
                           <td style={{ padding: '1rem', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '0.4rem',
+                                justifyContent: 'flex-end',
+                                flexWrap: 'wrap',
+                              }}
+                            >
                               {/* Change Shift & Location */}
                               <button
                                 onClick={() => {
                                   setSelectedPersonForShift({
                                     id: person.id,
                                     name: person.name,
+                                    email: person.email,
                                     isDoctor: person.isDoctor,
+                                    isServerAccount: person.isServerAccount,
                                     currentShift: person.todayShift,
                                     currentHours: person.shiftHours,
                                     currentBreak: person.breakTime,
@@ -1140,12 +1696,33 @@ export const AdminDashboardView: React.FC = () => {
                                     currentRoom: person.roomOrArea,
                                     department: person.department,
                                   });
-                                  setShiftNameInput(person.todayShift.replace(' Shift', ''));
-                                  setShiftHoursInput(person.shiftHours);
-                                  setBreakTimeInput(person.breakTime);
-                                  setWorkingDaysInput(person.workingDays);
+                                  const hasAssignment = person.todayShift !== 'Unassigned Shift';
+                                  setShiftNameInput(
+                                    hasAssignment
+                                      ? person.todayShift.replace(' Shift', '')
+                                      : 'Morning',
+                                  );
+                                  setShiftHoursInput(
+                                    hasAssignment
+                                      ? person.shiftHours
+                                      : person.isDoctor
+                                        ? '08:00 AM – 02:00 PM'
+                                        : '08:00 AM – 04:00 PM',
+                                  );
+                                  setBreakTimeInput(
+                                    hasAssignment
+                                      ? person.breakTime
+                                      : person.isDoctor
+                                        ? '12:30 PM - 01:00 PM'
+                                        : '01:00 PM - 01:30 PM',
+                                  );
+                                  setWorkingDaysInput(
+                                    hasAssignment ? person.workingDays : 'Mon - Sat',
+                                  );
                                   setWorkingLocInput(person.workingLocation);
-                                  setRoomAreaInput(person.roomOrArea);
+                                  setRoomAreaInput(
+                                    person.roomOrArea === 'Unassigned' ? '' : person.roomOrArea,
+                                  );
                                 }}
                                 title="Assign / Change Shift and Location"
                                 style={{
@@ -1166,57 +1743,99 @@ export const AdminDashboardView: React.FC = () => {
                               </button>
 
                               {/* Edit Profile */}
-                              <button
-                                onClick={() => {
-                                  setSelectedPersonForEdit({
-                                    id: person.id,
-                                    name: person.name,
-                                    isDoctor: person.isDoctor,
-                                    phone: person.phone,
-                                    email: person.email,
-                                    department: person.department,
-                                    specialization: person.specialization,
-                                    qualification: person.qualification,
-                                    experience: person.experience,
-                                    staffType: person.staffType,
-                                    status: person.status,
-                                  });
-                                }}
-                                title="Edit Profile Details"
-                                style={{
-                                  background: 'rgba(0, 0, 0, 0.04)',
-                                  border: '1px solid var(--border)',
-                                  color: 'var(--text-secondary)',
-                                  padding: '0.4rem 0.65rem',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontWeight: 600,
-                                  fontSize: '0.78rem',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                }}
-                              >
-                                <Edit3 size={13} /> Edit
-                              </button>
+                              {!person.isServerAccount && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedPersonForEdit({
+                                      id: person.id,
+                                      name: person.name,
+                                      isDoctor: person.isDoctor,
+                                      phone: person.phone,
+                                      email: person.email,
+                                      department: person.department,
+                                      specialization: person.specialization,
+                                      qualification: person.qualification,
+                                      experience: person.experience,
+                                      staffType: person.staffType,
+                                      status: person.status,
+                                    });
+                                  }}
+                                  title="Edit Profile Details"
+                                  style={{
+                                    background: 'rgba(0, 0, 0, 0.04)',
+                                    border: '1px solid var(--border)',
+                                    color: 'var(--text-secondary)',
+                                    padding: '0.4rem 0.65rem',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    fontSize: '0.78rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                  }}
+                                >
+                                  <Edit3 size={13} /> Edit
+                                </button>
+                              )}
 
                               {/* Toggle Status */}
-                              <button
-                                onClick={() => handleToggleStatus(person.id, person.isDoctor, person.status, person.name)}
-                                title={person.status === 'ACTIVE' ? 'Deactivate Account' : 'Activate Account'}
-                                style={{
-                                  background: person.status === 'ACTIVE' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
-                                  border: `1px solid ${person.status === 'ACTIVE' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
-                                  color: person.status === 'ACTIVE' ? '#ef4444' : '#10b981',
-                                  padding: '0.4rem 0.65rem',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontWeight: 700,
-                                  fontSize: '0.78rem',
-                                }}
-                              >
-                                {person.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                              </button>
+                              {person.isServerAccount ? (
+                                <button
+                                  onClick={() => void handleToggleRegisteredUserStatus(person)}
+                                  title={
+                                    person.status === 'ACTIVE'
+                                      ? 'Deactivate account'
+                                      : 'Activate account'
+                                  }
+                                  style={{
+                                    background:
+                                      person.status === 'ACTIVE'
+                                        ? 'rgba(239, 68, 68, 0.08)'
+                                        : 'rgba(16, 185, 129, 0.08)',
+                                    border: `1px solid ${person.status === 'ACTIVE' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
+                                    color: person.status === 'ACTIVE' ? '#ef4444' : '#10b981',
+                                    padding: '0.4rem 0.65rem',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.78rem',
+                                  }}
+                                >
+                                  {person.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    handleToggleStatus(
+                                      person.id,
+                                      person.isDoctor,
+                                      person.status,
+                                      person.name,
+                                    )
+                                  }
+                                  title={
+                                    person.status === 'ACTIVE'
+                                      ? 'Deactivate Account'
+                                      : 'Activate Account'
+                                  }
+                                  style={{
+                                    background:
+                                      person.status === 'ACTIVE'
+                                        ? 'rgba(239, 68, 68, 0.08)'
+                                        : 'rgba(16, 185, 129, 0.08)',
+                                    border: `1px solid ${person.status === 'ACTIVE' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
+                                    color: person.status === 'ACTIVE' ? '#ef4444' : '#10b981',
+                                    padding: '0.4rem 0.65rem',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.78rem',
+                                  }}
+                                >
+                                  {person.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1249,11 +1868,19 @@ export const AdminDashboardView: React.FC = () => {
             }}
           >
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+              <h2
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Institutional Roster & Duty Shift Calendar
               </h2>
               <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Complete visibility of clinical shifts and on-duty staffing matrix across all hospital departments.
+                Complete visibility of clinical shifts and on-duty staffing matrix across all
+                hospital departments.
               </p>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -1306,7 +1933,14 @@ export const AdminDashboardView: React.FC = () => {
             }}
           >
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', textAlign: 'left' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.86rem',
+                  textAlign: 'left',
+                }}
+              >
                 <thead>
                   <tr
                     style={{
@@ -1339,13 +1973,21 @@ export const AdminDashboardView: React.FC = () => {
                           transition: 'background 0.15s ease',
                         }}
                       >
-                        <td style={{ padding: '0.9rem 1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        <td
+                          style={{
+                            padding: '0.9rem 1rem',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                          }}
+                        >
                           {entry.personName}
                         </td>
                         <td style={{ padding: '0.9rem 1rem' }}>
                           <span
                             style={{
-                              background: isDoctor ? 'rgba(2, 132, 199, 0.12)' : 'rgba(13, 148, 136, 0.12)',
+                              background: isDoctor
+                                ? 'rgba(2, 132, 199, 0.12)'
+                                : 'rgba(13, 148, 136, 0.12)',
                               color: isDoctor ? '#0284c7' : '#0d9488',
                               padding: '0.2rem 0.55rem',
                               borderRadius: '6px',
@@ -1356,7 +1998,13 @@ export const AdminDashboardView: React.FC = () => {
                             {entry.role}
                           </span>
                         </td>
-                        <td style={{ padding: '0.9rem 1rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        <td
+                          style={{
+                            padding: '0.9rem 1rem',
+                            color: 'var(--text-secondary)',
+                            fontWeight: 600,
+                          }}
+                        >
                           {entry.date}
                         </td>
                         <td style={{ padding: '0.9rem 1rem' }}>
@@ -1376,12 +2024,22 @@ export const AdminDashboardView: React.FC = () => {
                         <td style={{ padding: '0.9rem 1rem', color: 'var(--text-secondary)' }}>
                           {entry.shiftHours}
                         </td>
-                        <td style={{ padding: '0.9rem 1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <td
+                          style={{
+                            padding: '0.9rem 1rem',
+                            fontWeight: 600,
+                            color: 'var(--text-primary)',
+                          }}
+                        >
                           {entry.department}
                         </td>
                         <td style={{ padding: '0.9rem 1rem' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{entry.workingLocation}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entry.roomArea}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {entry.workingLocation}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {entry.roomArea}
+                          </div>
                         </td>
                         <td style={{ padding: '0.9rem 1rem', textAlign: 'right' }}>
                           <button
@@ -1389,7 +2047,19 @@ export const AdminDashboardView: React.FC = () => {
                               setSelectedPersonForShift({
                                 id: entry.personId,
                                 name: entry.personName,
+                                email:
+                                  combinedDirectory.find(
+                                    (person) =>
+                                      person.id === entry.personId &&
+                                      person.isDoctor === (entry.role === 'DOCTOR'),
+                                  )?.email ?? '',
                                 isDoctor: entry.role === 'DOCTOR',
+                                isServerAccount:
+                                  combinedDirectory.find(
+                                    (person) =>
+                                      person.id === entry.personId &&
+                                      person.isDoctor === (entry.role === 'DOCTOR'),
+                                  )?.isServerAccount ?? false,
                                 currentShift: entry.shiftName,
                                 currentHours: entry.shiftHours,
                                 currentBreak: '12:30 PM - 01:00 PM',
@@ -1440,11 +2110,19 @@ export const AdminDashboardView: React.FC = () => {
               marginBottom: '1.5rem',
             }}
           >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+            <h2
+              style={{
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                margin: 0,
+                color: 'var(--text-primary)',
+              }}
+            >
               Hospital Working Locations & Department Coverage
             </h2>
             <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              Administrator oversight of physical hospital zones and currently deployed staff count in each area.
+              Administrator oversight of physical hospital zones and currently deployed staff count
+              in each area.
             </p>
           </div>
 
@@ -1457,7 +2135,7 @@ export const AdminDashboardView: React.FC = () => {
           >
             {WORKING_LOCATIONS.map((loc) => {
               const activeAtLoc = combinedDirectory.filter(
-                (p) => p.workingLocation === loc && p.status === 'ACTIVE'
+                (p) => p.workingLocation === loc && p.status === 'ACTIVE',
               );
               return (
                 <div
@@ -1470,7 +2148,14 @@ export const AdminDashboardView: React.FC = () => {
                     background: 'var(--bg-card)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.75rem',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <div
                         style={{
@@ -1487,7 +2172,14 @@ export const AdminDashboardView: React.FC = () => {
                         <MapPin size={18} />
                       </div>
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: '1rem',
+                            fontWeight: 800,
+                            color: 'var(--text-primary)',
+                          }}
+                        >
                           {loc}
                         </h3>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -1497,7 +2189,10 @@ export const AdminDashboardView: React.FC = () => {
                     </div>
                     <span
                       style={{
-                        background: activeAtLoc.length > 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                        background:
+                          activeAtLoc.length > 0
+                            ? 'rgba(16, 185, 129, 0.12)'
+                            : 'rgba(239, 68, 68, 0.12)',
                         color: activeAtLoc.length > 0 ? '#10b981' : '#ef4444',
                         padding: '0.2rem 0.6rem',
                         borderRadius: '999px',
@@ -1509,11 +2204,23 @@ export const AdminDashboardView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '0.75rem',
+                    }}
+                  >
                     Assigned Personnel:
                   </div>
                   {activeAtLoc.length === 0 ? (
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    <div
+                      style={{
+                        fontSize: '0.78rem',
+                        color: 'var(--text-muted)',
+                        fontStyle: 'italic',
+                      }}
+                    >
                       No active personnel assigned to this zone today.
                     </div>
                   ) : (
@@ -1533,8 +2240,11 @@ export const AdminDashboardView: React.FC = () => {
                           }}
                         >
                           <div>
-                            <strong style={{ color: 'var(--text-primary)' }}>{p.name}</strong> ({p.displayRole})
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.roomOrArea}</div>
+                            <strong style={{ color: 'var(--text-primary)' }}>{p.name}</strong> (
+                            {p.displayRole})
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                              {p.roomOrArea}
+                            </div>
                           </div>
                           <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: 600 }}>
                             {p.todayShift}
@@ -1579,7 +2289,14 @@ export const AdminDashboardView: React.FC = () => {
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.25rem',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <div
                   style={{
@@ -1596,7 +2313,14 @@ export const AdminDashboardView: React.FC = () => {
                   <Stethoscope size={20} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '1.2rem',
+                      fontWeight: 800,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     Add New Doctor
                   </h3>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -1618,10 +2342,24 @@ export const AdminDashboardView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateDoctor} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <form
+              onSubmit={handleCreateDoctor}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Doctor Full Name *
                   </label>
                   <input
@@ -1642,7 +2380,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Employee ID
                   </label>
                   <input
@@ -1663,9 +2409,20 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Official Email *
                   </label>
                   <input
@@ -1686,7 +2443,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Phone Number
                   </label>
                   <input
@@ -1707,9 +2472,20 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Medical Department
                   </label>
                   <select
@@ -1733,7 +2509,15 @@ export const AdminDashboardView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Specialization
                   </label>
                   <input
@@ -1754,9 +2538,20 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Qualification
                   </label>
                   <input
@@ -1776,7 +2571,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Experience
                   </label>
                   <input
@@ -1809,7 +2612,16 @@ export const AdminDashboardView: React.FC = () => {
                   gap: '0.85rem',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#0284c7' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    color: '#0284c7',
+                  }}
+                >
                   <Clock size={15} /> Shift Assignment (Admin Control)
                 </div>
 
@@ -1822,8 +2634,12 @@ export const AdminDashboardView: React.FC = () => {
                       style={{
                         padding: '0.4rem 0.75rem',
                         borderRadius: '6px',
-                        border: docShiftPreset === preset ? '2px solid #0284c7' : '1px solid var(--border)',
-                        background: docShiftPreset === preset ? 'rgba(2, 132, 199, 0.12)' : 'transparent',
+                        border:
+                          docShiftPreset === preset
+                            ? '2px solid #0284c7'
+                            : '1px solid var(--border)',
+                        background:
+                          docShiftPreset === preset ? 'rgba(2, 132, 199, 0.12)' : 'transparent',
                         color: docShiftPreset === preset ? '#0284c7' : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.78rem',
@@ -1835,9 +2651,20 @@ export const AdminDashboardView: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div
+                  className="modal-form-grid-2"
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}
+                >
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Shift Hours
                     </label>
                     <input
@@ -1856,7 +2683,15 @@ export const AdminDashboardView: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Break Time
                     </label>
                     <input
@@ -1876,9 +2711,20 @@ export const AdminDashboardView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div
+                  className="modal-form-grid-2"
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}
+                >
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Working Location
                     </label>
                     <select
@@ -1902,7 +2748,15 @@ export const AdminDashboardView: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Room / Consultation Room
                     </label>
                     <input
@@ -1923,7 +2777,14 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.75rem',
+                  marginTop: '0.5rem',
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setShowAddDoctorModal(false)}
@@ -1991,7 +2852,14 @@ export const AdminDashboardView: React.FC = () => {
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.25rem',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <div
                   style={{
@@ -2008,7 +2876,14 @@ export const AdminDashboardView: React.FC = () => {
                   <Users size={20} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '1.2rem',
+                      fontWeight: 800,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     Add New Staff Member
                   </h3>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -2017,7 +2892,10 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => setShowAddStaffModal(false)}
+                onClick={() => {
+                  setShowAddStaffModal(false);
+                  setStfPassword('');
+                }}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -2030,10 +2908,24 @@ export const AdminDashboardView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateStaff} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <form
+              onSubmit={handleCreateStaff}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Staff Full Name *
                   </label>
                   <input
@@ -2054,7 +2946,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Employee ID
                   </label>
                   <input
@@ -2075,14 +2975,25 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Staff Type / Role *
                   </label>
                   <select
                     value={stfType}
-                    onChange={(e) => setStfType(e.target.value as typeof STAFF_TYPES[number])}
+                    onChange={(e) => setStfType(e.target.value as (typeof STAFF_TYPES)[number])}
                     style={{
                       width: '100%',
                       padding: '0.6rem 0.75rem',
@@ -2102,7 +3013,15 @@ export const AdminDashboardView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Department
                   </label>
                   <select
@@ -2127,9 +3046,20 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Official Email *
                   </label>
                   <input
@@ -2150,7 +3080,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Phone Number
                   </label>
                   <input
@@ -2171,6 +3109,43 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <label
+                  htmlFor="staff-initial-password"
+                  style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    marginBottom: '4px',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  Initial login password *
+                </label>
+                <input
+                  id="staff-initial-password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={stfPassword}
+                  onChange={(e) => setStfPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-input, var(--bg-card))',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.88rem',
+                  }}
+                />
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                  Use at least 8 characters with a letter and a number. Share it through a secure
+                  channel.
+                </span>
+              </div>
+
               {/* Shift & Location Assignment */}
               <div
                 style={{
@@ -2183,7 +3158,16 @@ export const AdminDashboardView: React.FC = () => {
                   gap: '0.85rem',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#0d9488' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    color: '#0d9488',
+                  }}
+                >
                   <Clock size={15} /> Shift & Location Assignment (Admin Control)
                 </div>
 
@@ -2196,8 +3180,12 @@ export const AdminDashboardView: React.FC = () => {
                       style={{
                         padding: '0.4rem 0.75rem',
                         borderRadius: '6px',
-                        border: stfShiftPreset === preset ? '2px solid #0d9488' : '1px solid var(--border)',
-                        background: stfShiftPreset === preset ? 'rgba(13, 148, 136, 0.12)' : 'transparent',
+                        border:
+                          stfShiftPreset === preset
+                            ? '2px solid #0d9488'
+                            : '1px solid var(--border)',
+                        background:
+                          stfShiftPreset === preset ? 'rgba(13, 148, 136, 0.12)' : 'transparent',
                         color: stfShiftPreset === preset ? '#0d9488' : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.78rem',
@@ -2209,9 +3197,20 @@ export const AdminDashboardView: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div
+                  className="modal-form-grid-2"
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}
+                >
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Shift Hours
                     </label>
                     <input
@@ -2230,7 +3229,15 @@ export const AdminDashboardView: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Break Time
                     </label>
                     <input
@@ -2250,9 +3257,20 @@ export const AdminDashboardView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div
+                  className="modal-form-grid-2"
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}
+                >
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Working Location
                     </label>
                     <select
@@ -2276,7 +3294,15 @@ export const AdminDashboardView: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, marginBottom: '3px', color: 'var(--text-muted)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        marginBottom: '3px',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
                       Assigned Area / Station
                     </label>
                     <input
@@ -2297,10 +3323,21 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.75rem',
+                  marginTop: '0.5rem',
+                }}
+              >
                 <button
                   type="button"
-                  onClick={() => setShowAddStaffModal(false)}
+                  disabled={isCreatingStaff}
+                  onClick={() => {
+                    setShowAddStaffModal(false);
+                    setStfPassword('');
+                  }}
                   style={{
                     padding: '0.6rem 1.15rem',
                     borderRadius: '0.5rem',
@@ -2309,13 +3346,14 @@ export const AdminDashboardView: React.FC = () => {
                     color: 'var(--text-secondary)',
                     fontWeight: 600,
                     fontSize: '0.85rem',
-                    cursor: 'pointer',
+                    cursor: isCreatingStaff ? 'wait' : 'pointer',
                   }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={isCreatingStaff}
                   style={{
                     padding: '0.6rem 1.35rem',
                     borderRadius: '0.5rem',
@@ -2324,14 +3362,222 @@ export const AdminDashboardView: React.FC = () => {
                     color: '#ffffff',
                     fontWeight: 700,
                     fontSize: '0.85rem',
-                    cursor: 'pointer',
+                    cursor: isCreatingStaff ? 'wait' : 'pointer',
+                    opacity: isCreatingStaff ? 0.7 : 1,
                     boxShadow: '0 4px 12px rgba(13, 148, 136, 0.35)',
                   }}
                 >
-                  Create Staff Record
+                  {isCreatingStaff ? 'Creating Account…' : 'Create Staff Account & Shift'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: ONE-TIME TEMPORARY CREDENTIALS (FIRST LOGIN) ───────── */}
+      {oneTimeCredential && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            zIndex: 10000,
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border, #e2e8f0)',
+              borderRadius: '1rem',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '2rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: '1.25rem',
+                    fontWeight: 800,
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  User Created Successfully
+                </h3>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#d97706' }}>
+                  User must change password on first login.
+                </div>
+              </div>
+            </div>
+
+            <p
+              style={{
+                fontSize: '0.85rem',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
+                margin: '0 0 1.25rem',
+              }}
+            >
+              Account for <strong>{oneTimeCredential.name}</strong> ({oneTimeCredential.email}) has
+              been provisioned. A cryptographically secure temporary password was generated.
+            </p>
+
+            <div
+              style={{
+                background: 'var(--bg-card-subtle, #f8fafc)',
+                border: '1px solid var(--border, #e2e8f0)',
+                borderRadius: '0.75rem',
+                padding: '1rem',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: 'var(--text-muted)',
+                  marginBottom: '0.35rem',
+                }}
+              >
+                ONE-TIME TEMPORARY CREDENTIALS:
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Login Email:
+                </span>
+                <code
+                  style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}
+                >
+                  {oneTimeCredential.email}
+                </code>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Temporary Password:
+                </span>
+                <code
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.05em',
+                    color: '#0284c7',
+                    background: 'rgba(2, 132, 199, 0.08)',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '4px',
+                  }}
+                >
+                  {oneTimeCredential.temporaryPassword}
+                </code>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.5rem',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: '0.5rem',
+                padding: '0.75rem',
+                fontSize: '0.78rem',
+                color: '#92400e',
+                lineHeight: 1.4,
+                marginBottom: '1.5rem',
+              }}
+            >
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+              <div>
+                <strong>Security Policy Notice:</strong> This temporary password is shown only once
+                and will not be displayed again. It is not saved to browser localStorage. Please
+                securely transmit it to the user. On first sign-in, the system will block normal
+                application access until they set a new permanent password.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    `HealthCare+ Credentials\nEmail: ${oneTimeCredential.email}\nTemporary Password: ${oneTimeCredential.temporaryPassword}\nNote: Password change is required on first login.`,
+                  );
+                  showToast('Credentials copied to clipboard.');
+                }}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Copy Credentials
+              </button>
+              <button
+                type="button"
+                onClick={() => setOneTimeCredential(null)}
+                style={{
+                  padding: '0.65rem 1.35rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  background: '#0d9488',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                I Have Shared / Saved This · Close
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2363,12 +3609,33 @@ export const AdminDashboardView: React.FC = () => {
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.25rem',
+              }}
+            >
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: '1.25rem',
+                    fontWeight: 800,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   Assign Shift & Working Location
                 </h3>
-                <div style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 700, marginTop: '2px' }}>
+                <div
+                  style={{
+                    fontSize: '0.82rem',
+                    color: '#0284c7',
+                    fontWeight: 700,
+                    marginTop: '2px',
+                  }}
+                >
                   {selectedPersonForShift.name} ({selectedPersonForShift.department})
                 </div>
               </div>
@@ -2386,10 +3653,21 @@ export const AdminDashboardView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveShiftAssignment} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form
+              onSubmit={handleSaveShiftAssignment}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
               {/* Presets */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    marginBottom: '6px',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
                   Select Shift Template
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -2401,9 +3679,15 @@ export const AdminDashboardView: React.FC = () => {
                       style={{
                         padding: '0.45rem 0.85rem',
                         borderRadius: '6px',
-                        border: shiftNameInput.includes(preset) ? '2px solid #0284c7' : '1px solid var(--border)',
-                        background: shiftNameInput.includes(preset) ? 'rgba(2, 132, 199, 0.12)' : 'transparent',
-                        color: shiftNameInput.includes(preset) ? '#0284c7' : 'var(--text-secondary)',
+                        border: shiftNameInput.includes(preset)
+                          ? '2px solid #0284c7'
+                          : '1px solid var(--border)',
+                        background: shiftNameInput.includes(preset)
+                          ? 'rgba(2, 132, 199, 0.12)'
+                          : 'transparent',
+                        color: shiftNameInput.includes(preset)
+                          ? '#0284c7'
+                          : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.82rem',
                         cursor: 'pointer',
@@ -2415,9 +3699,20 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Shift Name
                   </label>
                   <input
@@ -2437,7 +3732,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Duty Hours
                   </label>
                   <input
@@ -2458,9 +3761,20 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Break Schedule
                   </label>
                   <input
@@ -2479,7 +3793,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Working Days
                   </label>
                   <input
@@ -2499,9 +3821,20 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Working Location *
                   </label>
                   <select
@@ -2526,7 +3859,15 @@ export const AdminDashboardView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Room / Assigned Area *
                   </label>
                   <input
@@ -2561,10 +3902,18 @@ export const AdminDashboardView: React.FC = () => {
                   gap: '0.5rem',
                 }}
               >
-                <Radio size={16} /> Saving this assignment will automatically dispatch a real-time shift notice to the staff or doctor device.
+                <Radio size={16} /> The assignment is saved centrally. The staff or doctor dashboard
+                refreshes automatically within 10 seconds.
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.75rem',
+                  marginTop: '0.5rem',
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setSelectedPersonForShift(null)}
@@ -2583,6 +3932,7 @@ export const AdminDashboardView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSavingShift}
                   style={{
                     padding: '0.6rem 1.35rem',
                     borderRadius: '0.5rem',
@@ -2591,11 +3941,12 @@ export const AdminDashboardView: React.FC = () => {
                     color: '#ffffff',
                     fontWeight: 700,
                     fontSize: '0.85rem',
-                    cursor: 'pointer',
+                    cursor: isSavingShift ? 'wait' : 'pointer',
+                    opacity: isSavingShift ? 0.7 : 1,
                     boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
                   }}
                 >
-                  Save & Dispatch Shift Update
+                  {isSavingShift ? 'Saving…' : 'Save Shift Update'}
                 </button>
               </div>
             </form>
@@ -2630,9 +3981,23 @@ export const AdminDashboardView: React.FC = () => {
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.25rem',
+              }}
+            >
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: '1.25rem',
+                    fontWeight: 800,
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   Edit {selectedPersonForEdit.isDoctor ? 'Doctor' : 'Staff'} Profile
                 </h3>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -2653,9 +4018,20 @@ export const AdminDashboardView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfileEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form
+              onSubmit={handleSaveProfileEdit}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    marginBottom: '4px',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
                   Full Name
                 </label>
                 <input
@@ -2677,9 +4053,20 @@ export const AdminDashboardView: React.FC = () => {
                 />
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Email Address
                   </label>
                   <input
@@ -2701,7 +4088,15 @@ export const AdminDashboardView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Phone Number
                   </label>
                   <input
@@ -2723,15 +4118,29 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div
+                className="modal-form-grid-2"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Department
                   </label>
                   <select
                     value={selectedPersonForEdit.department}
                     onChange={(e) =>
-                      setSelectedPersonForEdit({ ...selectedPersonForEdit, department: e.target.value })
+                      setSelectedPersonForEdit({
+                        ...selectedPersonForEdit,
+                        department: e.target.value,
+                      })
                     }
                     style={{
                       width: '100%',
@@ -2751,7 +4160,15 @@ export const AdminDashboardView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '4px',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
                     Account Status
                   </label>
                   <select
@@ -2780,9 +4197,20 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
               {selectedPersonForEdit.isDoctor && (
-                <div className="modal-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div
+                  className="modal-form-grid-2"
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+                >
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        marginBottom: '4px',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
                       Specialization
                     </label>
                     <input
@@ -2806,7 +4234,15 @@ export const AdminDashboardView: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        marginBottom: '4px',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
                       Qualification
                     </label>
                     <input
@@ -2832,7 +4268,14 @@ export const AdminDashboardView: React.FC = () => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '0.75rem',
+                  marginTop: '0.5rem',
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setSelectedPersonForEdit(null)}
@@ -2878,7 +4321,7 @@ export const AdminDashboardView: React.FC = () => {
             position: 'fixed',
             bottom: '24px',
             right: '24px',
-            background: '#0f172a',
+            background: toastIsError ? '#7f1d1d' : '#0f172a',
             color: '#ffffff',
             padding: '0.85rem 1.35rem',
             borderRadius: '10px',
@@ -2892,7 +4335,11 @@ export const AdminDashboardView: React.FC = () => {
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <CheckCircle2 size={18} style={{ color: '#10b981' }} />
+          {toastIsError ? (
+            <X size={18} style={{ color: '#fecaca' }} />
+          ) : (
+            <CheckCircle2 size={18} style={{ color: '#10b981' }} />
+          )}
           {toastMessage}
         </div>
       )}

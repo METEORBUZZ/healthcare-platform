@@ -1,5 +1,6 @@
 :root {
-  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body:
+    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Colors */
@@ -84,7 +85,9 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 h1,
@@ -377,7 +380,6 @@ a {
 }
 
 @keyframes pulseSubtle {
-
   0%,
   100% {
     opacity: 1;
@@ -437,15 +439,12 @@ a {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg,
-      rgba(15, 23, 42, 0.42) 0%,
-      rgba(10, 15, 28, 0.68) 100%);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.42) 0%, rgba(10, 15, 28, 0.68) 100%);
   backdrop-filter: blur(14px) saturate(180%) contrast(105%);
   -webkit-backdrop-filter: blur(14px) saturate(180%) contrast(105%);
   z-index: 1;
   pointer-events: none;
 }
-
 
 .apple-glass-badge {
   background: rgba(255, 255, 255, 0.14);
@@ -453,7 +452,9 @@ a {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 9999px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.45);
 }
 
 .apple-glass-search {
@@ -462,14 +463,18 @@ a {
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .apple-glass-search:focus-within {
   background: #ffffff;
   border-color: #38bdf8;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28), 0 0 0 3px rgba(2, 132, 199, 0.35);
+  box-shadow:
+    0 12px 35px rgba(0, 0, 0, 0.28),
+    0 0 0 3px rgba(2, 132, 199, 0.35);
 }
 
 .apple-glass-widget {
@@ -478,7 +483,9 @@ a {
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 16px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -486,7 +493,9 @@ a {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 .apple-icon-circle {
@@ -524,14 +533,14 @@ a {
   align-items: center;
   font-size: 0.72rem;
   font-weight: 600;
-  color: #00C2CB;
+  color: #00c2cb;
   letter-spacing: 0.01em;
   white-space: nowrap;
   padding: 0 0.15rem;
 }
 
 .services-ticker-dot {
-  color: #FF2A85;
+  color: #ff2a85;
   font-size: 1rem;
   line-height: 1;
   margin: 0 0.6rem;
@@ -539,8 +548,158 @@ a {
 }
 
 @keyframes tickerScroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Account menu */
+.navbar-profile-control {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.navbar-profile-trigger {
+  overflow: hidden;
+}
+
+.navbar-profile-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(2, 132, 199, 0.14);
+}
+
+.navbar-profile-portal-button,
+.navbar-profile-menu-toggle {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.navbar-profile-portal-button {
+  border-radius: var(--radius-full);
+}
+
+.navbar-profile-menu-toggle {
+  align-self: stretch;
+}
+
+.navbar-profile-menu {
+  z-index: 100;
+  border-radius: 20px !important;
+  padding: 0.65rem !important;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.2) !important;
+  scrollbar-width: thin;
+}
+
+.navbar-profile-menu-header {
+  border: 1px solid var(--border-light);
+  border-radius: 15px;
+  padding: 0.8rem !important;
+  margin-bottom: 0.65rem !important;
+  background: linear-gradient(135deg, var(--bg-card-subtle), var(--bg-card) 78%);
+}
+
+.navbar-profile-menu-avatar {
+  box-shadow:
+    0 0 0 4px var(--bg-card),
+    0 0 0 5px var(--border);
+}
+
+.navbar-profile-menu-featured,
+.navbar-profile-menu-link,
+.navbar-profile-signout,
+.navbar-role-chip {
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    filter 0.16s ease;
+}
+
+.navbar-profile-menu-featured {
+  min-height: 44px;
+  border-radius: 12px !important;
+}
+
+.navbar-profile-menu-featured:hover {
+  filter: brightness(0.97);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
+}
+
+.navbar-profile-menu-link {
+  min-height: 42px;
+  border-radius: 11px !important;
+}
+
+.navbar-profile-menu-link:hover {
+  filter: brightness(0.97);
+  transform: translateX(2px);
+}
+
+.navbar-profile-menu-divider {
+  height: 1px;
+  margin: 0.55rem 0;
+  background: var(--border);
+}
+
+.navbar-role-section {
+  padding: 0.3rem 0.3rem 0.45rem;
+}
+
+.navbar-role-section-title {
+  margin: 0 0 0.55rem 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.navbar-role-switcher {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.navbar-role-chip {
+  justify-content: center;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0.35rem 0.2rem !important;
+  white-space: nowrap;
+}
+
+.navbar-role-chip:hover {
+  filter: brightness(0.97);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-profile-signout {
+  min-height: 42px;
+  margin-top: 0.1rem;
+  border-radius: 11px !important;
+}
+
+.navbar-profile-signout:hover {
+  background: var(--danger-bg) !important;
+}
+
+.profile-gallery-button {
+  min-height: 42px;
+  margin-top: 0.75rem;
+  cursor: pointer;
+}
+
+.profile-gallery-hint {
+  margin-top: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
 }
 
 /* ── Responsive Viewport Rules ───────────────────────────────────── */
@@ -552,17 +711,38 @@ a {
   }
 
   .navbar-inner {
+    position: relative;
     gap: 0.5rem;
     padding: 0.6rem 1rem !important;
+  }
+
+  .navbar-actions,
+  .navbar-profile-control {
+    position: static !important;
   }
 
   .navbar-brand {
     min-width: 0;
   }
 
-  .navbar-profile-control,
+  .navbar-profile-trigger {
+    min-height: 42px;
+  }
+
+  .navbar-profile-menu {
+    top: calc(100% + 8px) !important;
+    left: max(0.75rem, calc((100vw - 360px) / 2)) !important;
+    right: auto !important;
+    max-height: calc(100dvh - 7rem) !important;
+  }
+
+  .navbar-profile-menu-header {
+    padding: 0.75rem !important;
+  }
+
   .desktop-auth-button {
-    display: none !important;
+    padding: 0.4rem 0.65rem !important;
+    font-size: 0.78rem !important;
   }
 
   .niramaya-logo-subtext {
@@ -673,6 +853,10 @@ a {
     flex-shrink: 0;
   }
 
+  .navbar-theme-toggle {
+    display: none !important;
+  }
+
   /* Hide ticker on very small screens to save space */
   .services-ticker-item {
     font-size: 0.66rem;
@@ -724,6 +908,325 @@ a {
   }
 }
 
+.admin-loading,
+.admin-login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background:
+    radial-gradient(ellipse at top left, rgba(2, 132, 199, 0.12), transparent 42%), var(--bg-main);
+}
+
+.admin-loading {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.admin-login-card {
+  width: min(100%, 440px);
+  padding: clamp(1.35rem, 5vw, 2.25rem);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.admin-login-brand {
+  margin-bottom: 2rem;
+}
+
+.admin-login-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1rem;
+  border-radius: 15px;
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.admin-login-card h1,
+.admin-content-card h1 {
+  margin-bottom: 0.4rem;
+  color: var(--text-primary);
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+}
+
+.admin-login-card > p,
+.admin-content-card > p {
+  margin-bottom: 1.35rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.admin-login-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-login-form label {
+  margin-top: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-login-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.admin-login-form input:focus-visible,
+.admin-app button:focus-visible {
+  outline: 3px solid rgba(2, 132, 199, 0.35);
+  outline-offset: 2px;
+}
+
+.admin-login-form button,
+.admin-app-user button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: #0369a1;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-login-form button {
+  margin-top: 0.8rem;
+}
+
+.admin-login-form button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.admin-login-security {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.admin-login-error {
+  margin-bottom: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #991b1b;
+  background: #fef2f2;
+  font-size: 0.83rem;
+}
+
+.admin-app {
+  min-height: 100vh;
+  background: var(--bg-main);
+}
+
+.admin-app-header,
+.admin-app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem clamp(0.8rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.admin-app-header {
+  justify-content: space-between;
+}
+
+.admin-app-brand,
+.admin-app-user,
+.admin-app-user button,
+.admin-app-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.admin-app-brand {
+  border: 0;
+  color: var(--text-primary);
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-app-user {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.admin-app-user button {
+  min-height: 38px;
+  padding: 0.45rem 0.65rem;
+  background: #334155;
+}
+
+.admin-app-nav {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.admin-app-nav button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--text-secondary);
+  background: transparent;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-app-nav button[aria-current='page'] {
+  border-color: rgba(2, 132, 199, 0.2);
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.admin-app-main {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+.admin-content-card {
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-table-wrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.admin-data-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.admin-data-table th,
+.admin-data-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.admin-data-table th {
+  position: sticky;
+  top: 0;
+  color: var(--text-secondary);
+  background: var(--bg-card-subtle);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-outcome {
+  font-weight: 800;
+}
+
+.admin-outcome-success {
+  color: #047857;
+}
+
+.admin-outcome-failure,
+.admin-outcome-denied {
+  color: #b91c1c;
+}
+
+.admin-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.admin-metric-grid article {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card-subtle);
+}
+
+.admin-metric-grid span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.admin-metric-grid strong {
+  color: var(--text-primary);
+  font-size: 1.8rem;
+}
+
+.admin-settings-list {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.35fr) minmax(0, 1fr);
+  gap: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-settings-list dt {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.admin-settings-list dd {
+  color: var(--text-primary);
+}
+
+@media (max-width: 620px) {
+  .admin-app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-app-user {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .admin-settings-list {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────────────
    DASHBOARD RESPONSIVE HELPERS
    These classes are used by dashboard grid layouts inside inline styles.
@@ -734,7 +1237,7 @@ a {
 /* KPI metrics row: wrap nicely on small screens */
 @media (max-width: 600px) {
   /* Force single-column grids inside modals on very small screens */
-  [data-mobile-grid="2col"] {
+  [data-mobile-grid='2col'] {
     grid-template-columns: 1fr !important;
   }
 }
@@ -1098,8 +1601,8 @@ a {
 
 /* ── Touch target minimum size ──────────────────────────────────── */
 @media (max-width: 768px) {
-  button, 
-  [role="button"] {
+  button,
+  [role='button'] {
     min-height: 36px;
   }
 

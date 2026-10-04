@@ -11,10 +11,12 @@ export interface UserRow {
   status: UserStatus;
   avatar_url: string | null;
   last_login_at: Date | null;
+  must_change_password: boolean;
   created_at: Date;
 }
 
-const USER_COLUMNS = 'id, name, email, password_hash, role, status, avatar_url, last_login_at, created_at';
+const USER_COLUMNS =
+  'id, name, email, password_hash, role, status, avatar_url, last_login_at, must_change_password, created_at';
 
 export const toUserDto = (r: UserRow): UserDto => ({
   id: r.id,
@@ -24,6 +26,7 @@ export const toUserDto = (r: UserRow): UserDto => ({
   status: r.status,
   avatarUrl: r.avatar_url,
   lastLoginAt: r.last_login_at?.toISOString() ?? null,
+  mustChangePassword: r.must_change_password ?? false,
   createdAt: r.created_at.toISOString(),
 });
 
@@ -44,6 +47,7 @@ interface SessionRow {
   role: Role;
   status: UserStatus;
   avatar_url: string | null;
+  must_change_password: boolean;
   doctor_id: number | null;
   patient_id: number | null;
   is_verified: boolean | null;
@@ -52,7 +56,7 @@ interface SessionRow {
 /** User plus the ids of their role-specific profile rows, in one round trip. */
 export async function findSessionUser(db: Db, id: number): Promise<(SessionUser & { status: UserStatus }) | null> {
   const { rows } = await db.query<SessionRow>(
-    `SELECT u.id, u.name, u.email, u.role, u.status, u.avatar_url,
+    `SELECT u.id, u.name, u.email, u.role, u.status, u.avatar_url, u.must_change_password,
             d.id AS doctor_id, d.is_verified, p.id AS patient_id
        FROM users u
        LEFT JOIN doctors d  ON d.user_id = u.id
@@ -72,18 +76,38 @@ export async function findSessionUser(db: Db, id: number): Promise<(SessionUser 
     doctorId: r.doctor_id,
     patientId: r.patient_id,
     isVerified: r.doctor_id ? r.is_verified : null,
+    mustChangePassword: Boolean(r.must_change_password),
   };
 }
 
 export async function create(
   db: Db,
-  input: { name: string; email: string; passwordHash: string; role: Role },
+  input: {
+    name: string;
+    email: string;
+    passwordHash: string;
+    role: Role;
+    mustChangePassword?: boolean;
+  },
 ): Promise<UserRow> {
+  const mustChange = input.mustChangePassword ?? false;
   const { rows } = await db.query<UserRow>(
-    `INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING ${USER_COLUMNS}`,
-    [input.name, input.email, input.passwordHash, input.role],
+    `INSERT INTO users (name, email, password_hash, role, must_change_password) VALUES ($1, $2, $3, $4, $5) RETURNING ${USER_COLUMNS}`,
+    [input.name, input.email, input.passwordHash, input.role, mustChange],
   );
   return rows[0]!;
+}
+
+export async function updatePassword(
+  db: Db,
+  id: number,
+  passwordHash: string,
+  mustChangePassword = false,
+): Promise<void> {
+  await db.query(
+    'UPDATE users SET password_hash = $1, must_change_password = $2 WHERE id = $3',
+    [passwordHash, mustChangePassword, id],
+  );
 }
 
 export async function touchLastLogin(db: Db, id: number): Promise<void> {

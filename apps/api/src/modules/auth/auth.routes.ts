@@ -1,10 +1,15 @@
 import { Router } from 'express';
-import { loginSchema, registerSchema, updateMeSchema } from '@healthcare/shared';
+import { changePasswordSchema, loginSchema, registerSchema, updateMeSchema } from '@healthcare/shared';
 import { asyncHandler, parse, requireAuth } from '../../common/http';
 import { authenticate } from '../../middleware/auth';
 import { loginLimiter, registerLimiter } from '../../middleware/rateLimit';
 import * as service from './auth.service';
-import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies } from './auth.tokens';
+import {
+  clearAuthCookies,
+  REFRESH_COOKIE,
+  setAdminAccessCookie,
+  setAuthCookies,
+} from './auth.tokens';
 
 export const authRoutes = Router();
 
@@ -26,7 +31,55 @@ authRoutes.post(
     const input = parse(loginSchema, req.body);
     const { user, ...tokens } = await service.login(input, req.get('user-agent'));
     setAuthCookies(res, tokens);
+    if (user.mustChangePassword) {
+      res.json({
+        authenticated: true,
+        mustChangePassword: true,
+        message: 'Password change required',
+        data: user,
+        accessToken: tokens.accessToken,
+      });
+      return;
+    }
     res.json({ data: user });
+  }),
+);
+
+authRoutes.post(
+  '/change-password',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { userId } = requireAuth(req);
+    const input = parse(changePasswordSchema, req.body);
+    const { user, ...tokens } = await service.changePassword(
+      userId,
+      { currentPassword: input.currentPassword, newPassword: input.newPassword },
+      req.get('user-agent'),
+    );
+    setAuthCookies(res, tokens);
+    if (user.role === 'ADMIN') {
+      setAdminAccessCookie(res, tokens.accessToken);
+    }
+    res.json({
+      message: 'Password changed successfully',
+      mustChangePassword: false,
+      data: user,
+      accessToken: tokens.accessToken,
+    });
+  }),
+);
+
+authRoutes.get(
+  '/change-password',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { userId } = requireAuth(req);
+    const user = await service.me(userId);
+    res.json({
+      data: {
+        mustChangePassword: Boolean(user.mustChangePassword),
+      },
+    });
   }),
 );
 

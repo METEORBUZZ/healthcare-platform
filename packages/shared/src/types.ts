@@ -12,6 +12,7 @@ export interface SessionUser {
   patientId: number | null;
   /** Only meaningful for doctors: unverified doctors are hidden from the public directory. */
   isVerified: boolean | null;
+  mustChangePassword?: boolean;
 }
 
 export interface UserDto {
@@ -22,7 +23,17 @@ export interface UserDto {
   status: UserStatus;
   avatarUrl: string | null;
   lastLoginAt: string | null;
+  mustChangePassword?: boolean;
   createdAt: string;
+}
+
+
+export interface AuthResponseDto {
+  authenticated: boolean;
+  mustChangePassword?: boolean;
+  message?: string;
+  data?: SessionUser;
+  accessToken?: string;
 }
 
 export interface AvailabilityDayDto {
@@ -164,6 +175,34 @@ export interface AdminDashboardDto {
   recent: AppointmentDto[];
 }
 
+export interface AdminAuditLogDto {
+  id: number;
+  actorUserId: number | null;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  outcome: 'SUCCESS' | 'FAILURE' | 'DENIED';
+  requestId: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export interface AdminAnalyticsDto {
+  totalUsers: number;
+  totalDoctors: number;
+  totalStaff: number;
+  totalAppointments: number;
+  appointmentsToday: number;
+  pendingAppointments: number;
+}
+
+export interface AdminSettingsDto {
+  publicAppUrl: string;
+  adminAppUrl: string;
+  clinicTimezone: string;
+  bookingWindowDays: number;
+}
+
 export type DashboardDto = PatientDashboardDto | DoctorDashboardDto | AdminDashboardDto;
 
 export interface PatientVitalsDto {
@@ -267,6 +306,17 @@ export interface StaffProfileDto {
   status: UserStatus;
 }
 
+export interface ShiftAssignmentDto {
+  targetEmail: string;
+  shiftName: string;
+  shiftHours: string;
+  breakTime: string;
+  workingDays: string;
+  workingLocation: string;
+  roomArea: string;
+  updatedAt: string;
+}
+
 export interface AssignedPatientDto {
   id: number;
   patientId: string; // e.g. "PT-10029"
@@ -282,9 +332,19 @@ export interface AssignedPatientDto {
   priority: 'Routine' | 'Urgent' | 'STAT Emergency';
   doctorId: number;
   diagnosis?: string;
-  prescriptions?: Array<{ medication: string; dosage: string; frequency: string; duration: string }>;
+  prescriptions?: Array<{
+    medication: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+  }>;
   medicalNotes?: string[];
-  labReports?: Array<{ testName: string; status: 'Normal' | 'Abnormal' | 'Pending'; date: string; resultSummary: string }>;
+  labReports?: Array<{
+    testName: string;
+    status: 'Normal' | 'Abnormal' | 'Pending';
+    date: string;
+    resultSummary: string;
+  }>;
   history?: Array<{ date: string; title: string; doctor: string; notes: string }>;
 }
 
@@ -362,4 +422,3 @@ export interface HospitalOverviewDto {
   patientCount: number;
   pendingTasks: number;
 }
-

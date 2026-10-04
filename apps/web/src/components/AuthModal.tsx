@@ -14,7 +14,6 @@ import {
   ArrowRight,
   Info,
   CheckCircle2,
-  Building2,
   HeartPulse,
   ClipboardList,
   Pill,
@@ -27,15 +26,11 @@ interface AuthModalProps {
   initialRole?: Role;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({
-  onClose,
-  initialRole = 'DOCTOR',
-}) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'DOCTOR' }) => {
   const { login, quickLogin } = useAuth();
 
-  // Tab: DOCTOR vs STAFF vs ADMIN
-  const [activeTab, setActiveTab] = useState<'DOCTOR' | 'STAFF' | 'ADMIN'>(() => {
-    if (initialRole === 'ADMIN') return 'ADMIN';
+  // Public portal sign-in is limited to clinical roles; administrators use the configured admin origin.
+  const [activeTab, setActiveTab] = useState<'DOCTOR' | 'STAFF'>(() => {
     if (
       initialRole === 'NURSE' ||
       initialRole === 'RECEPTIONIST' ||
@@ -50,7 +45,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Login form state
   const [email, setEmail] = useState('doctor@demo.test');
-  const [password, setPassword] = useState('Demo@12345');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -63,11 +58,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (initialRole === 'DOCTOR') {
       setActiveTab('DOCTOR');
       setEmail('doctor@demo.test');
-      setPassword('Demo@12345');
-    } else if (initialRole === 'ADMIN') {
-      setActiveTab('ADMIN');
-      setEmail('admin@demo.test');
-      setPassword('Demo@12345');
+      setPassword('');
     } else if (
       initialRole === 'NURSE' ||
       initialRole === 'RECEPTIONIST' ||
@@ -80,22 +71,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       else if (initialRole === 'PHARMACIST') setEmail('pharmacist@demo.test');
       else if (initialRole === 'LABORATORY_STAFF') setEmail('lab@demo.test');
       else setEmail('nurse@demo.test');
-      setPassword('Demo@12345');
+      setPassword('');
     }
   }, [initialRole]);
 
-  const handleTabChange = (tab: 'DOCTOR' | 'STAFF' | 'ADMIN') => {
+  const handleTabChange = (tab: 'DOCTOR' | 'STAFF') => {
     setActiveTab(tab);
     setError(null);
     if (tab === 'DOCTOR') {
       setEmail('doctor@demo.test');
-      setPassword('Demo@12345');
+      setPassword('');
     } else if (tab === 'STAFF') {
       setEmail('nurse@demo.test');
-      setPassword('Demo@12345');
-    } else if (tab === 'ADMIN') {
-      setEmail('admin@demo.test');
-      setPassword('Demo@12345');
+      setPassword('');
     }
   };
 
@@ -226,7 +214,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div
                 style={{
@@ -238,7 +233,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       ? '#0284c7'
                       : activeTab === 'STAFF'
                         ? '#0d9488'
-                        : '#7c3aed',
+                        : '#0d9488',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -249,7 +244,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               >
                 {activeTab === 'DOCTOR' && <Stethoscope size={22} />}
                 {activeTab === 'STAFF' && <Users size={22} />}
-                {activeTab === 'ADMIN' && <Building2 size={22} />}
               </div>
               <div>
                 <h3
@@ -264,7 +258,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 >
                   {activeTab === 'DOCTOR' && 'Doctor Clinical Login'}
                   {activeTab === 'STAFF' && 'Hospital Staff Login'}
-                  {activeTab === 'ADMIN' && 'Administrator Login'}
                 </h3>
                 <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
                   Restricted Internal Portal · Private System
@@ -292,11 +285,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
           </div>
 
-          {/* ─── Separated Doctor vs Staff vs Admin Tabs ──────────────────── */}
+          {/* ─── Separated Doctor and Staff Tabs ─────────────────────────── */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: 'repeat(2, 1fr)',
               gap: '0.4rem',
               marginTop: '1.25rem',
               background: 'var(--bg-card)',
@@ -347,28 +340,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               }}
             >
               <Users size={14} /> Staff
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('ADMIN')}
-              style={{
-                padding: '0.55rem 0.5rem',
-                borderRadius: '9px',
-                border: 'none',
-                background: activeTab === 'ADMIN' ? '#7c3aed' : 'transparent',
-                color: activeTab === 'ADMIN' ? '#ffffff' : 'var(--text-secondary)',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.35rem',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Building2 size={14} /> Admin
             </button>
           </div>
         </div>
@@ -447,10 +418,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                   <Stethoscope size={18} color="#0284c7" />
                   <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div
+                      style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}
+                    >
                       Dr. Priya Sharma (Cardiologist)
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>doctor@demo.test</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      doctor@demo.test
+                    </div>
                   </div>
                 </div>
                 <ArrowRight size={16} color="#0284c7" />
@@ -480,45 +455,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   >
                     <div style={{ color: st.color }}>{st.icon}</div>
                     <div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      <div
+                        style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          color: 'var(--text-primary)',
+                        }}
+                      >
                         {st.title}
                       </div>
-                      <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>{st.name}</div>
+                      <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+                        {st.name}
+                      </div>
                     </div>
                   </button>
                 ))}
               </div>
-            )}
-
-            {/* ADMIN 1-Click */}
-            {activeTab === 'ADMIN' && (
-              <button
-                type="button"
-                onClick={() => handleQuickAccess('ADMIN')}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(124, 58, 237, 0.3)',
-                  background: 'rgba(124, 58, 237, 0.08)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Building2 size={18} color="#7c3aed" />
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Medical Superintendent & Admin
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>admin@demo.test</div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="#7c3aed" />
-              </button>
             )}
 
             <div
@@ -538,7 +490,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}
+          >
             <div>
               <label
                 htmlFor="auth-email"
@@ -552,7 +507,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               >
                 {activeTab === 'DOCTOR' && 'Doctor Email Address'}
                 {activeTab === 'STAFF' && 'Staff Member Email Address'}
-                {activeTab === 'ADMIN' && 'Administrator Email Address'}
               </label>
               <div style={{ position: 'relative' }}>
                 <div
@@ -573,13 +527,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   autoComplete="email"
                   className="form-input"
-                  placeholder={
-                    activeTab === 'DOCTOR'
-                      ? 'doctor@demo.test'
-                      : activeTab === 'STAFF'
-                        ? 'nurse@demo.test'
-                        : 'admin@demo.test'
-                  }
+                  placeholder={activeTab === 'DOCTOR' ? 'doctor@demo.test' : 'nurse@demo.test'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{ paddingLeft: '2.5rem', borderRadius: '10px' }}
@@ -588,7 +536,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.35rem',
+                }}
+              >
                 <label
                   htmlFor="auth-password"
                   style={{
@@ -681,11 +636,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               >
                 <Info size={15} color="#0284c7" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
+                  <div
+                    style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}
+                  >
                     Demo Credentials
                   </div>
                   <div>
-                    All hospital accounts use password: <code style={{ fontWeight: 700, color: '#0284c7' }}>Demo@12345</code>.
+                    All hospital accounts use password:{' '}
+                    <code style={{ fontWeight: 700, color: '#0284c7' }}>Demo@12345</code>.
                   </div>
                 </div>
               </div>
@@ -740,12 +698,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.5rem',
-                  background:
-                    activeTab === 'DOCTOR'
-                      ? '#0284c7'
-                      : activeTab === 'STAFF'
-                        ? '#0d9488'
-                        : '#7c3aed',
+                  background: activeTab === 'DOCTOR' ? '#0284c7' : '#0d9488',
                   boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
                   fontWeight: 700,
                 }}
@@ -757,7 +710,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <span>
                       {activeTab === 'DOCTOR' && 'Sign In as Doctor'}
                       {activeTab === 'STAFF' && 'Sign In as Staff'}
-                      {activeTab === 'ADMIN' && 'Sign In as Admin'}
                     </span>
                     <ArrowRight size={16} />
                   </>
@@ -781,11 +733,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           >
             <ShieldCheck size={16} color="#0d9488" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
+              <div
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  marginBottom: '2px',
+                }}
+              >
                 Private Hospital Security Policy
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                Public self-registration is permanently disabled. Doctors and staff are onboarded and managed directly by the <strong>Hospital Administrator</strong>.
+                Public self-registration is permanently disabled. Doctors and staff are onboarded
+                and managed directly by the <strong>Hospital Administrator</strong>.
               </div>
             </div>
           </div>

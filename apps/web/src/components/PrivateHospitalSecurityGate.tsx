@@ -15,7 +15,6 @@ import {
   Microscope,
   ClipboardList,
   HeartPulse,
-  Building2,
   Sparkles,
 } from 'lucide-react';
 import { NiramayaLogo } from './NiramayaLogo';
@@ -24,9 +23,11 @@ interface PrivateHospitalSecurityGateProps {
   onSuccess?: () => void;
 }
 
-export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGateProps> = ({ onSuccess }) => {
+export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGateProps> = ({
+  onSuccess,
+}) => {
   const { login, quickLogin } = useAuth();
-  const [activePortal, setActivePortal] = useState<'DOCTOR' | 'STAFF' | 'ADMIN'>('DOCTOR');
+  const [activePortal, setActivePortal] = useState<'DOCTOR' | 'STAFF'>('DOCTOR');
 
   // Form states
   const [email, setEmail] = useState('doctor@demo.test');
@@ -36,7 +37,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Switch portal tab and set appropriate default credentials
-  const handleSwitchPortal = (portal: 'DOCTOR' | 'STAFF' | 'ADMIN') => {
+  const handleSwitchPortal = (portal: 'DOCTOR' | 'STAFF') => {
     setActivePortal(portal);
     setLocalError(null);
     if (portal === 'DOCTOR') {
@@ -44,9 +45,6 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
       setPassword('Demo@12345');
     } else if (portal === 'STAFF') {
       setEmail('nurse@demo.test');
-      setPassword('Demo@12345');
-    } else if (portal === 'ADMIN') {
-      setEmail('admin@demo.test');
       setPassword('Demo@12345');
     }
   };
@@ -63,7 +61,9 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
       await login({ email: email.trim(), password: password.trim() });
       onSuccess?.();
     } catch (err: unknown) {
-      setLocalError((err as Error)?.message || 'Authentication failed. Please check your credentials.');
+      setLocalError(
+        (err as Error)?.message || 'Authentication failed. Please check your credentials.',
+      );
     } finally {
       setLoading(false);
     }
@@ -170,15 +170,17 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
               lineHeight: 1.5,
             }}
           >
-            Zero public patient access. Public patient registration is completely disabled. Attending Doctors, Medical Staff, and Administrators sign in below.
+            Zero public patient access. Public patient registration is completely disabled.
+            Attending Doctors and Medical Staff sign in below.
           </p>
         </div>
 
         {/* ─── Separated Login Portal Selector Tabs ───────────────────────── */}
         <div
+          className="portal-tab-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '0.75rem',
             marginBottom: '1.75rem',
           }}
@@ -203,6 +205,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
             }}
           >
             <div
+              className="tab-icon-circle"
               style={{
                 width: '38px',
                 height: '38px',
@@ -217,7 +220,9 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
               <Stethoscope size={20} />
             </div>
             <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>Doctor Login</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Physicians & Specialists</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              Physicians & Specialists
+            </div>
           </button>
 
           {/* Staff Tab */}
@@ -240,6 +245,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
             }}
           >
             <div
+              className="tab-icon-circle"
               style={{
                 width: '38px',
                 height: '38px',
@@ -254,50 +260,15 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
               <Users size={20} />
             </div>
             <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>Staff Login</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Nurse, Reception, Rx, Lab</div>
-          </button>
-
-          {/* Admin Tab */}
-          <button
-            type="button"
-            onClick={() => handleSwitchPortal('ADMIN')}
-            style={{
-              padding: '1rem 0.75rem',
-              borderRadius: '1rem',
-              border: activePortal === 'ADMIN' ? '2px solid #7c3aed' : '1px solid var(--border)',
-              background: activePortal === 'ADMIN' ? 'rgba(124, 58, 237, 0.12)' : 'var(--bg-card)',
-              color: activePortal === 'ADMIN' ? '#7c3aed' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.4rem',
-              transition: 'all 0.15s ease',
-              boxShadow: activePortal === 'ADMIN' ? '0 4px 14px rgba(124, 58, 237, 0.25)' : 'none',
-            }}
-          >
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: activePortal === 'ADMIN' ? '#7c3aed' : 'rgba(124, 58, 237, 0.1)',
-                color: activePortal === 'ADMIN' ? '#ffffff' : '#7c3aed',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Building2 size={20} />
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              Nurse, Reception, Rx, Lab
             </div>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>Admin Login</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Superintendent & Management</div>
           </button>
         </div>
 
-        {/* ─── Main Portal Card (Doctor vs Staff vs Admin) ──────────────────── */}
+        {/* ─── Main Portal Card (Doctor vs Staff) ─────────────────────────── */}
         <div
-          className="card"
+          className="card auth-card"
           style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
@@ -308,6 +279,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
         >
           {/* Header for Active Portal */}
           <div
+            className="quick-login-row"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -320,7 +292,14 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
             }}
           >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.25rem',
+                }}
+              >
                 <span
                   style={{
                     background:
@@ -347,13 +326,18 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
                 <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                   {activePortal === 'DOCTOR' && 'Attending Physician Portal'}
                   {activePortal === 'STAFF' && 'Internal Hospital Operations'}
-                  {activePortal === 'ADMIN' && 'Hospital Administrator Authority'}
                 </span>
               </div>
-              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: '1.4rem',
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 {activePortal === 'DOCTOR' && 'Doctor Clinical Portal Sign In'}
                 {activePortal === 'STAFF' && 'Hospital Staff Station Sign In'}
-                {activePortal === 'ADMIN' && 'Administrator Operations Sign In'}
               </h2>
             </div>
 
@@ -382,40 +366,23 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
                 <Sparkles size={14} /> 1-Click Sign In as Dr. Priya Sharma
               </button>
             )}
-
-            {activePortal === 'ADMIN' && (
-              <button
-                type="button"
-                onClick={() => {
-                  quickLogin('ADMIN');
-                  onSuccess?.();
-                }}
-                style={{
-                  background: 'rgba(124, 58, 237, 0.1)',
-                  color: '#7c3aed',
-                  border: '1px solid rgba(124, 58, 237, 0.3)',
-                  padding: '0.55rem 1rem',
-                  borderRadius: '0.6rem',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                }}
-              >
-                <Sparkles size={14} /> 1-Click Sign In as Hospital Admin
-              </button>
-            )}
           </div>
 
           {/* If STAFF Portal: Display Staff Station Selector Chips */}
           {activePortal === 'STAFF' && (
             <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.6rem' }}>
+              <div
+                style={{
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  marginBottom: '0.6rem',
+                }}
+              >
                 Select Staff Station for 1-Click Instant Login or auto-fill credentials:
               </div>
               <div
+                className="staff-station-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -469,7 +436,13 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
                       {station.icon}
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      <div
+                        style={{
+                          fontSize: '0.82rem',
+                          fontWeight: 800,
+                          color: 'var(--text-primary)',
+                        }}
+                      >
                         {station.name}
                       </div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -503,7 +476,10 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
           )}
 
           {/* Credentials Form */}
-          <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+          <form
+            onSubmit={handleFormSubmit}
+            style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}
+          >
             <div>
               <label
                 style={{
@@ -516,7 +492,6 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
               >
                 {activePortal === 'DOCTOR' && 'Doctor Email Address'}
                 {activePortal === 'STAFF' && 'Staff Member Email Address'}
-                {activePortal === 'ADMIN' && 'Administrator Email Address'}
               </label>
               <div style={{ position: 'relative' }}>
                 <Mail
@@ -535,9 +510,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
                   placeholder={
                     activePortal === 'DOCTOR'
                       ? 'doctor@demo.test'
-                      : activePortal === 'STAFF'
-                        ? 'nurse@demo.test or staff@niramaya.health'
-                        : 'admin@demo.test'
+                      : 'nurse@demo.test or staff@niramaya.health'
                   }
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -624,7 +597,8 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <KeyRound size={13} />
-                Demo Credentials: Password is <code style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Demo@12345</code>
+                Demo Credentials: Password is{' '}
+                <code style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Demo@12345</code>
               </span>
               <span>Encrypted SSL 256-Bit</span>
             </div>
@@ -633,12 +607,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
               type="submit"
               disabled={loading}
               style={{
-                background:
-                  activePortal === 'DOCTOR'
-                    ? '#0284c7'
-                    : activePortal === 'STAFF'
-                      ? '#0d9488'
-                      : '#7c3aed',
+                background: activePortal === 'DOCTOR' ? '#0284c7' : '#0d9488',
                 color: '#ffffff',
                 border: 'none',
                 padding: '0.8rem',
@@ -649,9 +618,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
                 boxShadow:
                   activePortal === 'DOCTOR'
                     ? '0 4px 14px rgba(2, 132, 199, 0.35)'
-                    : activePortal === 'STAFF'
-                      ? '0 4px 14px rgba(13, 148, 136, 0.35)'
-                      : '0 4px 14px rgba(124, 58, 237, 0.35)',
+                    : '0 4px 14px rgba(13, 148, 136, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -665,9 +632,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
                   ? 'Authenticating...'
                   : activePortal === 'DOCTOR'
                     ? 'Sign In to Doctor Console'
-                    : activePortal === 'STAFF'
-                      ? 'Sign In to Staff Station'
-                      : 'Sign In to Administrator Portal'}
+                    : 'Sign In to Staff Station'}
               </span>
               <ArrowRight size={17} />
             </button>
@@ -690,7 +655,9 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
           >
             <ShieldCheck size={18} style={{ color: '#10b981', flexShrink: 0 }} />
             <div>
-              <strong>Administrator-Managed System:</strong> Doctors and staff members do not self-register. Accounts and working shifts are created directly by the Hospital Administrator.
+              <strong>Administrator-Managed System:</strong> Doctors and staff members do not
+              self-register. Accounts and working shifts are created directly by the Hospital
+              Administrator.
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useShiftAssignment } from '../hooks/useShiftAssignment';
 import {
   hospitalOperationsService,
   type StaffRecord,
@@ -27,6 +28,11 @@ import {
 
 export const StaffDashboardView: React.FC = () => {
   const { user } = useAuth();
+  const {
+    assignment: shiftAssignment,
+    error: shiftSyncError,
+    refresh: refreshShift,
+  } = useShiftAssignment(user?.id);
   const [staff, setStaff] = useState<StaffRecord | null>(null);
 
   // Nurse state
@@ -65,7 +71,40 @@ export const StaffDashboardView: React.FC = () => {
 
   const loadData = useCallback(() => {
     const email = user?.email || 'nurse@demo.test';
-    const s = hospitalOperationsService.getStaffByEmail(email) || hospitalOperationsService.getStaff()[0];
+    const matchingStaff = hospitalOperationsService.getStaffByEmail(email);
+    const fallback = hospitalOperationsService.getStaff()[0];
+    const role: StaffRecord['role'] =
+      user?.role === 'NURSE'
+        ? 'NURSE'
+        : user?.role === 'RECEPTIONIST'
+          ? 'RECEPTIONIST'
+          : user?.role === 'PHARMACIST'
+            ? 'PHARMACIST'
+            : user?.role === 'LABORATORY_STAFF'
+              ? 'LABORATORY_STAFF'
+              : 'STAFF';
+    const staffType: StaffRecord['staffType'] =
+      role === 'NURSE'
+        ? 'Nurse'
+        : role === 'RECEPTIONIST'
+          ? 'Receptionist'
+          : role === 'PHARMACIST'
+            ? 'Pharmacist'
+            : role === 'LABORATORY_STAFF'
+              ? 'Laboratory Staff'
+              : 'Administrative Staff';
+    const s =
+      matchingStaff ??
+      (fallback
+        ? {
+            ...fallback,
+            userId: user?.id ?? fallback.userId,
+            name: user?.name ?? fallback.name,
+            email: user?.email ?? fallback.email,
+            role,
+            staffType,
+          }
+        : undefined);
     setStaff(s || null);
 
     setWardBeds(hospitalOperationsService.getWardBeds());
@@ -120,7 +159,11 @@ export const StaffDashboardView: React.FC = () => {
   const handleSaveNursingNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBed || !nursingNoteText.trim()) return;
-    hospitalOperationsService.addNursingNote(selectedBed.id, nursingNoteText.trim(), staff?.name || 'Sister Anjali Nair');
+    hospitalOperationsService.addNursingNote(
+      selectedBed.id,
+      nursingNoteText.trim(),
+      staff?.name || 'Sister Anjali Nair',
+    );
     showToast(`Bedside care note recorded for ${selectedBed.bedNumber}.`);
     setShowNursingNoteModal(false);
     loadData();
@@ -168,8 +211,14 @@ export const StaffDashboardView: React.FC = () => {
   const handleSaveLabResult = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLabTest || !labResultSummary.trim()) return;
-    hospitalOperationsService.updateLabResult(selectedLabTest.id, labResultSummary.trim(), labFindings.trim());
-    showToast(`Diagnostic results uploaded for ${selectedLabTest.patientName} (${selectedLabTest.testName}).`);
+    hospitalOperationsService.updateLabResult(
+      selectedLabTest.id,
+      labResultSummary.trim(),
+      labFindings.trim(),
+    );
+    showToast(
+      `Diagnostic results uploaded for ${selectedLabTest.patientName} (${selectedLabTest.testName}).`,
+    );
     setShowLabResultModal(false);
     loadData();
   };
@@ -183,6 +232,17 @@ export const StaffDashboardView: React.FC = () => {
   }
 
   const staffRole = user?.role || staff.role;
+  const currentStaff = shiftAssignment
+    ? {
+        ...staff,
+        todayShift: shiftAssignment.shiftName,
+        shiftHours: shiftAssignment.shiftHours,
+        breakTime: shiftAssignment.breakTime,
+        workingDays: shiftAssignment.workingDays,
+        workingLocation: shiftAssignment.workingLocation,
+        assignedArea: shiftAssignment.roomArea,
+      }
+    : staff;
 
   return (
     <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -190,7 +250,8 @@ export const StaffDashboardView: React.FC = () => {
       <div
         className="card"
         style={{
-          background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(2, 132, 199, 0.05) 100%)',
+          background:
+            'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(2, 132, 199, 0.05) 100%)',
           border: '1px solid rgba(5, 150, 105, 0.25)',
           borderRadius: '1.25rem',
           padding: '1.5rem 1.75rem',
@@ -204,7 +265,10 @@ export const StaffDashboardView: React.FC = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <img
-            src={staff.avatarUrl || 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=400'}
+            src={
+              staff.avatarUrl ||
+              'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=400'
+            }
             alt={staff.name}
             style={{
               width: '70px',
@@ -217,7 +281,14 @@ export const StaffDashboardView: React.FC = () => {
           />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+              <h1
+                style={{
+                  fontSize: '1.75rem',
+                  fontWeight: 800,
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 {staff.name}
               </h1>
               <span
@@ -248,11 +319,19 @@ export const StaffDashboardView: React.FC = () => {
                 {staff.employeeId}
               </span>
             </div>
-            <div style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', marginTop: '0.25rem', fontWeight: 600 }}>
+            <div
+              style={{
+                fontSize: '0.92rem',
+                color: 'var(--text-secondary)',
+                marginTop: '0.25rem',
+                fontWeight: 600,
+              }}
+            >
               Staff Designation: <strong>{staff.staffType}</strong> ({staff.department})
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-              Working Location: {staff.workingLocation} · Assigned Area: {staff.assignedArea} · {staff.phone}
+              Working Location: {currentStaff.workingLocation} · Assigned Area:{' '}
+              {currentStaff.assignedArea} · {staff.phone}
             </div>
           </div>
         </div>
@@ -268,8 +347,17 @@ export const StaffDashboardView: React.FC = () => {
               textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669' }}>{staff.staffType}</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669' }}>
+              {staff.staffType}
+            </div>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}
+            >
               Active Assignment
             </div>
           </div>
@@ -280,7 +368,8 @@ export const StaffDashboardView: React.FC = () => {
       <div
         className="card"
         style={{
-          background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(13, 148, 136, 0.05) 100%)',
+          background:
+            'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(13, 148, 136, 0.05) 100%)',
           border: '2px solid rgba(5, 150, 105, 0.25)',
           borderRadius: '1.25rem',
           padding: '1.5rem',
@@ -313,7 +402,14 @@ export const StaffDashboardView: React.FC = () => {
               <Clock size={20} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+              <h2
+                style={{
+                  fontSize: '1.15rem',
+                  fontWeight: 800,
+                  margin: 0,
+                  color: 'var(--text-primary)',
+                }}
+              >
                 Staff Shift & Station Roster
               </h2>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -321,6 +417,11 @@ export const StaffDashboardView: React.FC = () => {
               </span>
             </div>
           </div>
+          {shiftAssignment && (
+            <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700 }}>
+              Auto-synced · updated {new Date(shiftAssignment.updatedAt).toLocaleTimeString()}
+            </span>
+          )}
           <span
             style={{
               background: 'rgba(5, 150, 105, 0.15)',
@@ -338,6 +439,19 @@ export const StaffDashboardView: React.FC = () => {
           </span>
         </div>
 
+        {shiftSyncError && (
+          <div role="alert" style={{ marginBottom: '1rem', color: '#b91c1c', fontSize: '0.85rem' }}>
+            Shift updates could not be synchronized: {shiftSyncError}{' '}
+            <button
+              type="button"
+              onClick={() => void refreshShift()}
+              style={{ color: 'inherit', fontWeight: 700 }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <div
           style={{
             display: 'grid',
@@ -345,51 +459,161 @@ export const StaffDashboardView: React.FC = () => {
             gap: '1rem',
           }}
         >
-          <div style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              padding: '1rem',
+              borderRadius: '12px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.74rem',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
               <Clock size={13} color="#059669" /> Today's Shift
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.3rem' }}>
-              {staff.todayShift}
+            <div
+              style={{
+                fontSize: '1.05rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                marginTop: '0.3rem',
+              }}
+            >
+              {currentStaff.todayShift}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 700, marginTop: '0.15rem' }}>
-              {staff.shiftHours}
+            <div
+              style={{
+                fontSize: '0.8rem',
+                color: '#059669',
+                fontWeight: 700,
+                marginTop: '0.15rem',
+              }}
+            >
+              {currentStaff.shiftHours}
             </div>
           </div>
 
-          <div style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              padding: '1rem',
+              borderRadius: '12px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.74rem',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
               <MapPin size={13} color="#0284c7" /> Working Location
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.3rem' }}>
-              {staff.workingLocation}
+            <div
+              style={{
+                fontSize: '1.05rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                marginTop: '0.3rem',
+              }}
+            >
+              {currentStaff.workingLocation}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 700, marginTop: '0.15rem' }}>
+            <div
+              style={{
+                fontSize: '0.8rem',
+                color: '#0284c7',
+                fontWeight: 700,
+                marginTop: '0.15rem',
+              }}
+            >
               {staff.department}
             </div>
           </div>
 
-          <div style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              padding: '1rem',
+              borderRadius: '12px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.74rem',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
               <Building size={13} color="#d97706" /> Assigned Area / Room
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.3rem' }}>
-              {staff.assignedArea}
+            <div
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                marginTop: '0.3rem',
+              }}
+            >
+              {currentStaff.assignedArea}
             </div>
             <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-              Break: {staff.breakTime}
+              Break: {currentStaff.breakTime}
             </div>
           </div>
 
-          <div style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              padding: '1rem',
+              borderRadius: '12px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.74rem',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
               <Calendar size={13} color="#7c3aed" /> Next Scheduled Shift
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.3rem' }}>
+            <div
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                marginTop: '0.3rem',
+              }}
+            >
               {staff.nextShift}
             </div>
             <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-              Roster: {staff.workingDays}
+              Roster: {currentStaff.workingDays}
             </div>
           </div>
         </div>
@@ -400,7 +624,16 @@ export const StaffDashboardView: React.FC = () => {
       {/* 1. NURSE DASHBOARD WORKSPACE */}
       {(staffRole === 'NURSE' || staff.staffType === 'Nurse') && (
         <div className="card" style={{ padding: '1.5rem', borderRadius: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1.25rem',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <HeartPulse size={22} color="#059669" />
@@ -409,13 +642,17 @@ export const StaffDashboardView: React.FC = () => {
                 </h2>
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {staff.assignedArea} · Bedside vitals, patient monitoring, and nursing progress notes.
+                {staff.assignedArea} · Bedside vitals, patient monitoring, and nursing progress
+                notes.
               </div>
             </div>
             <span className="badge badge-info">{wardBeds.length} Active Inpatients</span>
           </div>
 
-          <div className="ward-bed-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '1.25rem' }}>
+          <div
+            className="ward-bed-grid"
+            style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '1.25rem' }}
+          >
             {wardBeds.map((bed) => {
               const statusColor = {
                 Stable: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981' },
@@ -434,7 +671,14 @@ export const StaffDashboardView: React.FC = () => {
                     boxShadow: 'var(--shadow-sm)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.65rem',
+                    }}
+                  >
                     <span
                       style={{
                         background: '#059669',
@@ -461,31 +705,90 @@ export const StaffDashboardView: React.FC = () => {
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 0.2rem', color: 'var(--text-primary)' }}>
+                  <h3
+                    style={{
+                      fontSize: '1.05rem',
+                      fontWeight: 800,
+                      margin: '0 0 0.2rem',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     {bed.patientName}
                   </h3>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.65rem' }}>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                      marginBottom: '0.65rem',
+                    }}
+                  >
                     {bed.patientId} · {bed.gender}, {bed.age} yrs · Dr: {bed.attendingDoctor}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--bg-card-subtle)', padding: '0.5rem 0.65rem', borderRadius: '8px', marginBottom: '0.85rem' }}>
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--text-secondary)',
+                      background: 'var(--bg-card-subtle)',
+                      padding: '0.5rem 0.65rem',
+                      borderRadius: '8px',
+                      marginBottom: '0.85rem',
+                    }}
+                  >
                     <strong>Diagnosis:</strong> {bed.diagnosis}
                   </div>
 
                   {/* Vitals Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', textAlign: 'center', marginBottom: '1rem', fontSize: '0.75rem' }}>
-                    <div style={{ background: 'rgba(2, 132, 199, 0.08)', padding: '0.4rem 0.2rem', borderRadius: '6px' }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: '0.4rem',
+                      textAlign: 'center',
+                      marginBottom: '1rem',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: 'rgba(2, 132, 199, 0.08)',
+                        padding: '0.4rem 0.2rem',
+                        borderRadius: '6px',
+                      }}
+                    >
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>BP</div>
-                      <div style={{ fontWeight: 800, color: '#0284c7' }}>{bed.vitals.bp.split(' ')[0]}</div>
+                      <div style={{ fontWeight: 800, color: '#0284c7' }}>
+                        {bed.vitals.bp.split(' ')[0]}
+                      </div>
                     </div>
-                    <div style={{ background: 'rgba(239, 68, 68, 0.08)', padding: '0.4rem 0.2rem', borderRadius: '6px' }}>
+                    <div
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        padding: '0.4rem 0.2rem',
+                        borderRadius: '6px',
+                      }}
+                    >
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>Pulse</div>
-                      <div style={{ fontWeight: 800, color: '#dc2626' }}>{bed.vitals.pulse} bpm</div>
+                      <div style={{ fontWeight: 800, color: '#dc2626' }}>
+                        {bed.vitals.pulse} bpm
+                      </div>
                     </div>
-                    <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '0.4rem 0.2rem', borderRadius: '6px' }}>
+                    <div
+                      style={{
+                        background: 'rgba(245, 158, 11, 0.08)',
+                        padding: '0.4rem 0.2rem',
+                        borderRadius: '6px',
+                      }}
+                    >
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>Temp</div>
                       <div style={{ fontWeight: 800, color: '#d97706' }}>{bed.vitals.temp}</div>
                     </div>
-                    <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '0.4rem 0.2rem', borderRadius: '6px' }}>
+                    <div
+                      style={{
+                        background: 'rgba(16, 185, 129, 0.08)',
+                        padding: '0.4rem 0.2rem',
+                        borderRadius: '6px',
+                      }}
+                    >
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>SpO2</div>
                       <div style={{ fontWeight: 800, color: '#10b981' }}>{bed.vitals.spO2}%</div>
                     </div>
@@ -493,7 +796,15 @@ export const StaffDashboardView: React.FC = () => {
 
                   {/* Recent Nursing Notes snippet */}
                   {bed.nursingNotes.length > 0 && bed.nursingNotes[0] && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem', borderLeft: '2px solid #059669', paddingLeft: '0.5rem' }}>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--text-secondary)',
+                        marginBottom: '1rem',
+                        borderLeft: '2px solid #059669',
+                        paddingLeft: '0.5rem',
+                      }}
+                    >
                       <strong>{bed.nursingNotes[0].time}:</strong> {bed.nursingNotes[0].note}
                     </div>
                   )}
@@ -512,7 +823,12 @@ export const StaffDashboardView: React.FC = () => {
                       type="button"
                       onClick={() => handleOpenNursingNoteModal(bed)}
                       className="btn btn-primary btn-sm"
-                      style={{ flex: 1, borderRadius: '8px', fontSize: '0.75rem', background: '#059669' }}
+                      style={{
+                        flex: 1,
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        background: '#059669',
+                      }}
                     >
                       <PlusCircle size={13} /> Add Note
                     </button>
@@ -527,7 +843,16 @@ export const StaffDashboardView: React.FC = () => {
       {/* 2. RECEPTIONIST DASHBOARD WORKSPACE */}
       {(staffRole === 'RECEPTIONIST' || staff.staffType === 'Receptionist') && (
         <div className="card" style={{ padding: '1.5rem', borderRadius: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1.25rem',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ClipboardList size={22} color="#d97706" />
@@ -536,7 +861,8 @@ export const StaffDashboardView: React.FC = () => {
                 </h2>
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {staff.assignedArea} · Triage tokens, appointment check-in, and patient registration.
+                {staff.assignedArea} · Triage tokens, appointment check-in, and patient
+                registration.
               </div>
             </div>
 
@@ -544,16 +870,35 @@ export const StaffDashboardView: React.FC = () => {
               type="button"
               onClick={() => setShowPatientRegModal(true)}
               className="btn btn-primary btn-sm"
-              style={{ borderRadius: '10px', background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', border: 'none', fontWeight: 700 }}
+              style={{
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                border: 'none',
+                fontWeight: 700,
+              }}
             >
               <PlusCircle size={15} /> + Register New Patient (Check-In)
             </button>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                textAlign: 'left',
+                fontSize: '0.875rem',
+              }}
+            >
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.76rem', textTransform: 'uppercase' }}>
+                <tr
+                  style={{
+                    borderBottom: '2px solid var(--border)',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.76rem',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   <th style={{ padding: '0.75rem 0.6rem' }}>Token</th>
                   <th style={{ padding: '0.75rem 0.6rem' }}>Patient Name & ID</th>
                   <th style={{ padding: '0.75rem 0.6rem' }}>Contact</th>
@@ -567,18 +912,34 @@ export const StaffDashboardView: React.FC = () => {
                 {receptionQueue.map((item) => (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '0.85rem 0.6rem' }}>
-                      <span style={{ background: '#d97706', color: '#fff', padding: '0.2rem 0.6rem', borderRadius: '6px', fontWeight: 800 }}>
+                      <span
+                        style={{
+                          background: '#d97706',
+                          color: '#fff',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '6px',
+                          fontWeight: 800,
+                        }}
+                      >
                         {item.tokenNumber}
                       </span>
                     </td>
                     <td style={{ padding: '0.85rem 0.6rem' }}>
-                      <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.patientName}</div>
+                      <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+                        {item.patientName}
+                      </div>
                       <div style={{ fontSize: '0.72rem', color: '#0284c7' }}>{item.patientId}</div>
                     </td>
-                    <td style={{ padding: '0.85rem 0.6rem', color: 'var(--text-secondary)' }}>{item.phone}</td>
+                    <td style={{ padding: '0.85rem 0.6rem', color: 'var(--text-secondary)' }}>
+                      {item.phone}
+                    </td>
                     <td style={{ padding: '0.85rem 0.6rem' }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{item.doctorName}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.department}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {item.doctorName}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {item.department}
+                      </div>
                     </td>
                     <td style={{ padding: '0.85rem 0.6rem' }}>{item.appointmentTime}</td>
                     <td style={{ padding: '0.85rem 0.6rem' }}>
@@ -587,8 +948,8 @@ export const StaffDashboardView: React.FC = () => {
                           item.status === 'Checked In'
                             ? 'badge-success'
                             : item.status === 'In Consultation'
-                            ? 'badge-info'
-                            : 'badge-warning'
+                              ? 'badge-info'
+                              : 'badge-warning'
                         }`}
                       >
                         {item.status}
@@ -600,7 +961,11 @@ export const StaffDashboardView: React.FC = () => {
                           type="button"
                           onClick={() => handleCheckIn(item.id)}
                           className="btn btn-primary btn-sm"
-                          style={{ borderRadius: '6px', fontSize: '0.75rem', background: '#059669' }}
+                          style={{
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            background: '#059669',
+                          }}
                         >
                           <CheckCircle2 size={13} /> Check In
                         </button>
@@ -624,7 +989,16 @@ export const StaffDashboardView: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Prescription Queue */}
           <div className="card" style={{ padding: '1.5rem', borderRadius: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1.25rem',
+                flexWrap: 'wrap',
+                gap: '1rem',
+              }}
+            >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Pill size={22} color="#2563eb" />
@@ -633,7 +1007,8 @@ export const StaffDashboardView: React.FC = () => {
                   </h2>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {staff.assignedArea} · Prescriptions transmitted by doctors for verification and medicine dispensing.
+                  {staff.assignedArea} · Prescriptions transmitted by doctors for verification and
+                  medicine dispensing.
                 </div>
               </div>
               <span className="badge badge-warning">
@@ -641,7 +1016,13 @@ export const StaffDashboardView: React.FC = () => {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '1.25rem',
+              }}
+            >
               {rxQueue.map((rx) => (
                 <div
                   key={rx.id}
@@ -649,14 +1030,27 @@ export const StaffDashboardView: React.FC = () => {
                     border: '1px solid var(--border)',
                     borderRadius: '14px',
                     padding: '1.25rem',
-                    background: rx.status === 'Pending' ? 'rgba(37, 99, 235, 0.03)' : 'var(--bg-card)',
+                    background:
+                      rx.status === 'Pending' ? 'rgba(37, 99, 235, 0.03)' : 'var(--bg-card)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2563eb' }}>{rx.prescriptionId}</span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2563eb' }}>
+                      {rx.prescriptionId}
+                    </span>
                     <span
                       style={{
-                        background: rx.status === 'Pending' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                        background:
+                          rx.status === 'Pending'
+                            ? 'rgba(245, 158, 11, 0.15)'
+                            : 'rgba(16, 185, 129, 0.15)',
                         color: rx.status === 'Pending' ? '#d97706' : '#10b981',
                         padding: '0.2rem 0.6rem',
                         borderRadius: '999px',
@@ -668,17 +1062,53 @@ export const StaffDashboardView: React.FC = () => {
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.2rem' }}>{rx.patientName}</h3>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                    {rx.patientId} · Prescribed by: {rx.doctorName} ({rx.department}) at {rx.prescribedTime}
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 0.2rem' }}>
+                    {rx.patientName}
+                  </h3>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                      marginBottom: '0.75rem',
+                    }}
+                  >
+                    {rx.patientId} · Prescribed by: {rx.doctorName} ({rx.department}) at{' '}
+                    {rx.prescribedTime}
                   </div>
 
-                  <div style={{ background: 'var(--bg-card-subtle)', borderRadius: '10px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Prescribed Formulary:</div>
+                  <div
+                    style={{
+                      background: 'var(--bg-card-subtle)',
+                      borderRadius: '10px',
+                      padding: '0.75rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        marginBottom: '0.35rem',
+                      }}
+                    >
+                      Prescribed Formulary:
+                    </div>
                     {rx.medicines.map((m, i) => (
-                      <div key={i} style={{ borderBottom: i < rx.medicines.length - 1 ? '1px dashed var(--border)' : 'none', padding: '0.3rem 0' }}>
-                        <div style={{ fontWeight: 700, color: '#2563eb' }}>{m.name} ({m.dosage})</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Qty: {m.quantity} · {m.instructions}</div>
+                      <div
+                        key={i}
+                        style={{
+                          borderBottom:
+                            i < rx.medicines.length - 1 ? '1px dashed var(--border)' : 'none',
+                          padding: '0.3rem 0',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, color: '#2563eb' }}>
+                          {m.name} ({m.dosage})
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          Qty: {m.quantity} · {m.instructions}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -688,12 +1118,24 @@ export const StaffDashboardView: React.FC = () => {
                       type="button"
                       onClick={() => handleDispense(rx.id)}
                       className="btn btn-primary"
-                      style={{ width: '100%', borderRadius: '10px', background: '#2563eb', fontWeight: 700 }}
+                      style={{
+                        width: '100%',
+                        borderRadius: '10px',
+                        background: '#2563eb',
+                        fontWeight: 700,
+                      }}
                     >
                       <CheckCircle2 size={15} /> Dispense Medication & Log
                     </button>
                   ) : (
-                    <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, textAlign: 'center' }}>
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        color: '#10b981',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                      }}
+                    >
                       ✓ Dispensed by {rx.dispensedBy} at {rx.dispensedAt}
                     </div>
                   )}
@@ -704,24 +1146,56 @@ export const StaffDashboardView: React.FC = () => {
 
           {/* Medicine Stock Inventory */}
           <div className="card" style={{ padding: '1.5rem', borderRadius: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1rem',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Hospital Formulary & Medicine Stock</h3>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Stock levels and reorder alerts.</div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
+                  Hospital Formulary & Medicine Stock
+                </h3>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Stock levels and reorder alerts.
+                </div>
               </div>
               <input
                 type="text"
                 placeholder="Search medication..."
                 value={stockSearch}
                 onChange={(e) => setStockSearch(e.target.value)}
-                style={{ padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card-subtle)', fontSize: '0.85rem' }}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-card-subtle)',
+                  fontSize: '0.85rem',
+                }}
               />
             </div>
 
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  textAlign: 'left',
+                  fontSize: '0.85rem',
+                }}
+              >
                 <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                  <tr
+                    style={{
+                      borderBottom: '2px solid var(--border)',
+                      color: 'var(--text-muted)',
+                      fontSize: '0.75rem',
+                    }}
+                  >
                     <th style={{ padding: '0.65rem' }}>Medication Name</th>
                     <th style={{ padding: '0.65rem' }}>Category</th>
                     <th style={{ padding: '0.65rem' }}>In Stock</th>
@@ -735,18 +1209,43 @@ export const StaffDashboardView: React.FC = () => {
                     .filter((m) => m.name.toLowerCase().includes(stockSearch.toLowerCase()))
                     .map((item) => (
                       <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '0.65rem', fontWeight: 700, color: 'var(--text-primary)' }}>{item.name}</td>
-                        <td style={{ padding: '0.65rem', color: 'var(--text-secondary)' }}>{item.category}</td>
-                        <td style={{ padding: '0.65rem', fontWeight: 800, color: item.stock <= item.reorderLevel ? '#dc2626' : 'var(--text-primary)' }}>
+                        <td
+                          style={{
+                            padding: '0.65rem',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                          }}
+                        >
+                          {item.name}
+                        </td>
+                        <td style={{ padding: '0.65rem', color: 'var(--text-secondary)' }}>
+                          {item.category}
+                        </td>
+                        <td
+                          style={{
+                            padding: '0.65rem',
+                            fontWeight: 800,
+                            color:
+                              item.stock <= item.reorderLevel ? '#dc2626' : 'var(--text-primary)',
+                          }}
+                        >
                           {item.stock} {item.unit}
                         </td>
-                        <td style={{ padding: '0.65rem' }}>{item.reorderLevel} {item.unit}</td>
-                        <td style={{ padding: '0.65rem', color: 'var(--text-muted)' }}>{item.expiryDate}</td>
+                        <td style={{ padding: '0.65rem' }}>
+                          {item.reorderLevel} {item.unit}
+                        </td>
+                        <td style={{ padding: '0.65rem', color: 'var(--text-muted)' }}>
+                          {item.expiryDate}
+                        </td>
                         <td style={{ padding: '0.65rem' }}>
                           {item.stock <= item.reorderLevel ? (
-                            <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Low Stock</span>
+                            <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>
+                              Low Stock
+                            </span>
                           ) : (
-                            <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sufficient</span>
+                            <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                              Sufficient
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -761,7 +1260,16 @@ export const StaffDashboardView: React.FC = () => {
       {/* 4. LABORATORY STAFF DASHBOARD WORKSPACE */}
       {(staffRole === 'LABORATORY_STAFF' || staff.staffType === 'Laboratory Staff') && (
         <div className="card" style={{ padding: '1.5rem', borderRadius: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1.25rem',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Microscope size={22} color="#db2777" />
@@ -777,9 +1285,23 @@ export const StaffDashboardView: React.FC = () => {
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                textAlign: 'left',
+                fontSize: '0.875rem',
+              }}
+            >
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.76rem', textTransform: 'uppercase' }}>
+                <tr
+                  style={{
+                    borderBottom: '2px solid var(--border)',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.76rem',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   <th style={{ padding: '0.75rem 0.6rem' }}>Test ID</th>
                   <th style={{ padding: '0.75rem 0.6rem' }}>Patient Name & ID</th>
                   <th style={{ padding: '0.75rem 0.6rem' }}>Test Name</th>
@@ -792,17 +1314,36 @@ export const StaffDashboardView: React.FC = () => {
               <tbody>
                 {labTests.map((test) => (
                   <tr key={test.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '0.85rem 0.6rem', fontWeight: 800, color: '#db2777' }}>{test.testId}</td>
-                    <td style={{ padding: '0.85rem 0.6rem' }}>
-                      <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{test.patientName}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{test.patientId} · Ref: {test.doctorName}</div>
+                    <td style={{ padding: '0.85rem 0.6rem', fontWeight: 800, color: '#db2777' }}>
+                      {test.testId}
                     </td>
-                    <td style={{ padding: '0.85rem 0.6rem', fontWeight: 700, color: 'var(--text-primary)' }}>{test.testName}</td>
-                    <td style={{ padding: '0.85rem 0.6rem', color: 'var(--text-secondary)' }}>{test.sampleType}</td>
+                    <td style={{ padding: '0.85rem 0.6rem' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+                        {test.patientName}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {test.patientId} · Ref: {test.doctorName}
+                      </div>
+                    </td>
+                    <td
+                      style={{
+                        padding: '0.85rem 0.6rem',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      {test.testName}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.6rem', color: 'var(--text-secondary)' }}>
+                      {test.sampleType}
+                    </td>
                     <td style={{ padding: '0.85rem 0.6rem' }}>
                       <span
                         style={{
-                          background: test.priority === 'STAT Emergency' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(2, 132, 199, 0.12)',
+                          background:
+                            test.priority === 'STAT Emergency'
+                              ? 'rgba(239, 68, 68, 0.15)'
+                              : 'rgba(2, 132, 199, 0.12)',
                           color: test.priority === 'STAT Emergency' ? '#dc2626' : '#0284c7',
                           padding: '0.15rem 0.55rem',
                           borderRadius: '999px',
@@ -819,8 +1360,8 @@ export const StaffDashboardView: React.FC = () => {
                           test.status === 'Completed'
                             ? 'badge-success'
                             : test.status === 'In Analysis'
-                            ? 'badge-info'
-                            : 'badge-warning'
+                              ? 'badge-info'
+                              : 'badge-warning'
                         }`}
                       >
                         {test.status}
@@ -831,7 +1372,12 @@ export const StaffDashboardView: React.FC = () => {
                         type="button"
                         onClick={() => handleOpenLabResultModal(test)}
                         className="btn btn-primary btn-sm"
-                        style={{ borderRadius: '6px', fontSize: '0.75rem', background: '#db2777', border: 'none' }}
+                        style={{
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          background: '#db2777',
+                          border: 'none',
+                        }}
                       >
                         {test.status === 'Completed' ? 'View / Edit Results' : 'Enter Results'}
                       </button>
@@ -846,8 +1392,17 @@ export const StaffDashboardView: React.FC = () => {
 
       {/* ─── MODAL: UPDATE VITALS (NURSE) ─────────────────────────────────── */}
       {showVitalsModal && selectedBed && (
-        <div className="modal-overlay" onClick={() => setShowVitalsModal(false)} role="dialog" aria-modal="true">
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowVitalsModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '480px' }}
+          >
             <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.2rem', fontWeight: 800 }}>
               Update Vitals: {selectedBed.patientName} ({selectedBed.bedNumber})
             </h3>
@@ -856,57 +1411,140 @@ export const StaffDashboardView: React.FC = () => {
             </p>
 
             <form onSubmit={handleSaveVitals}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  marginBottom: '1rem',
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Blood Pressure</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Blood Pressure
+                  </label>
                   <input
                     type="text"
                     required
                     value={vitalsBp}
                     onChange={(e) => setVitalsBp(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Pulse Rate (BPM)</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Pulse Rate (BPM)
+                  </label>
                   <input
                     type="number"
                     required
                     value={vitalsPulse}
                     onChange={(e) => setVitalsPulse(Number(e.target.value))}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  marginBottom: '1.25rem',
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Temperature</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Temperature
+                  </label>
                   <input
                     type="text"
                     required
                     value={vitalsTemp}
                     onChange={(e) => setVitalsTemp(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Oxygen SpO2 (%)</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Oxygen SpO2 (%)
+                  </label>
                   <input
                     type="number"
                     required
                     value={vitalsSpO2}
                     onChange={(e) => setVitalsSpO2(Number(e.target.value))}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button type="button" onClick={() => setShowVitalsModal(false)} className="btn btn-secondary" style={{ borderRadius: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowVitalsModal(false)}
+                  className="btn btn-secondary"
+                  style={{ borderRadius: '10px' }}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ borderRadius: '10px', background: '#059669' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ borderRadius: '10px', background: '#059669' }}
+                >
                   Save Bedside Vitals
                 </button>
               </div>
@@ -917,8 +1555,17 @@ export const StaffDashboardView: React.FC = () => {
 
       {/* ─── MODAL: ADD NURSING NOTE (NURSE) ──────────────────────────────── */}
       {showNursingNoteModal && selectedBed && (
-        <div className="modal-overlay" onClick={() => setShowNursingNoteModal(false)} role="dialog" aria-modal="true">
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowNursingNoteModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '500px' }}
+          >
             <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.2rem', fontWeight: 800 }}>
               Bedside Nursing Care Note: {selectedBed.bedNumber}
             </h3>
@@ -934,15 +1581,31 @@ export const StaffDashboardView: React.FC = () => {
                   placeholder="Record nursing intervention, catheter checks, infusion changes, or patient status..."
                   value={nursingNoteText}
                   onChange={(e) => setNursingNoteText(e.target.value)}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', fontFamily: 'inherit' }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-card)',
+                    fontFamily: 'inherit',
+                  }}
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button type="button" onClick={() => setShowNursingNoteModal(false)} className="btn btn-secondary" style={{ borderRadius: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowNursingNoteModal(false)}
+                  className="btn btn-secondary"
+                  style={{ borderRadius: '10px' }}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ borderRadius: '10px', background: '#059669' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ borderRadius: '10px', background: '#059669' }}
+                >
                   Log Nursing Care
                 </button>
               </div>
@@ -953,8 +1616,17 @@ export const StaffDashboardView: React.FC = () => {
 
       {/* ─── MODAL: REGISTER PATIENT (RECEPTIONIST) ───────────────────────── */}
       {showPatientRegModal && (
-        <div className="modal-overlay" onClick={() => setShowPatientRegModal(false)} role="dialog" aria-modal="true">
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowPatientRegModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '520px' }}
+          >
             <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.25rem', fontWeight: 800 }}>
               Hospital Walk-in Registration & Token Issue
             </h3>
@@ -964,48 +1636,122 @@ export const StaffDashboardView: React.FC = () => {
 
             <form onSubmit={handleRegisterPatient}>
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Patient Full Name *</label>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    marginBottom: '0.35rem',
+                  }}
+                >
+                  Patient Full Name *
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Anand K. Shrestha"
                   value={newPtName}
                   onChange={(e) => setNewPtName(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-card)',
+                  }}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  marginBottom: '1rem',
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Contact Phone</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Contact Phone
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="+91 98..."
                     value={newPtPhone}
                     onChange={(e) => setNewPtPhone(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Time Slot</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Time Slot
+                  </label>
                   <input
                     type="text"
                     required
                     value={newPtTime}
                     onChange={(e) => setNewPtTime(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  marginBottom: '1.25rem',
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Department</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Department
+                  </label>
                   <select
                     value={newPtDept}
                     onChange={(e) => setNewPtDept(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   >
                     <option value="Cardiology">Cardiology</option>
                     <option value="General Medicine">General Medicine</option>
@@ -1014,11 +1760,26 @@ export const StaffDashboardView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>Attending Doctor</label>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '0.35rem',
+                    }}
+                  >
+                    Attending Doctor
+                  </label>
                   <select
                     value={newPtDoctor}
                     onChange={(e) => setNewPtDoctor(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-card)',
+                    }}
                   >
                     <option value="Dr. Priya Sharma">Dr. Priya Sharma</option>
                     <option value="Dr. Rajesh Patel">Dr. Rajesh Patel</option>
@@ -1029,10 +1790,19 @@ export const StaffDashboardView: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button type="button" onClick={() => setShowPatientRegModal(false)} className="btn btn-secondary" style={{ borderRadius: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPatientRegModal(false)}
+                  className="btn btn-secondary"
+                  style={{ borderRadius: '10px' }}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ borderRadius: '10px', background: '#d97706' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ borderRadius: '10px', background: '#d97706' }}
+                >
                   Issue Token & Check In
                 </button>
               </div>
@@ -1043,18 +1813,35 @@ export const StaffDashboardView: React.FC = () => {
 
       {/* ─── MODAL: ENTER LAB RESULT (LAB STAFF) ──────────────────────────── */}
       {showLabResultModal && selectedLabTest && (
-        <div className="modal-overlay" onClick={() => setShowLabResultModal(false)} role="dialog" aria-modal="true">
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowLabResultModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '540px' }}
+          >
             <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.25rem', fontWeight: 800 }}>
               Diagnostic Lab Report: {selectedLabTest.testName}
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-              Patient: {selectedLabTest.patientName} ({selectedLabTest.patientId}) · Sample: {selectedLabTest.sampleType}
+              Patient: {selectedLabTest.patientName} ({selectedLabTest.patientId}) · Sample:{' '}
+              {selectedLabTest.sampleType}
             </p>
 
             <form onSubmit={handleSaveLabResult}>
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    marginBottom: '0.35rem',
+                  }}
+                >
                   Quantitative Results & Reference Ranges *
                 </label>
                 <textarea
@@ -1063,12 +1850,26 @@ export const StaffDashboardView: React.FC = () => {
                   placeholder="e.g. Hb: 13.8 g/dL (Normal: 12-16), WBC: 6,800/mcL (Normal: 4000-11000)..."
                   value={labResultSummary}
                   onChange={(e) => setLabResultSummary(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', fontFamily: 'inherit' }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-card)',
+                    fontFamily: 'inherit',
+                  }}
                 />
               </div>
 
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    marginBottom: '0.35rem',
+                  }}
+                >
                   Pathologist Findings & Impressions
                 </label>
                 <input
@@ -1076,15 +1877,30 @@ export const StaffDashboardView: React.FC = () => {
                   placeholder="e.g. Mild normocytic anemia. No toxic granules detected."
                   value={labFindings}
                   onChange={(e) => setLabFindings(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-card)',
+                  }}
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button type="button" onClick={() => setShowLabResultModal(false)} className="btn btn-secondary" style={{ borderRadius: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowLabResultModal(false)}
+                  className="btn btn-secondary"
+                  style={{ borderRadius: '10px' }}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ borderRadius: '10px', background: '#db2777' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ borderRadius: '10px', background: '#db2777' }}
+                >
                   Upload & Sign Lab Report
                 </button>
               </div>
@@ -1114,7 +1930,9 @@ export const StaffDashboardView: React.FC = () => {
             zIndex: 9999,
           }}
         >
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }} />
+          <div
+            style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }}
+          />
           <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{toastMessage}</span>
         </div>
       )}

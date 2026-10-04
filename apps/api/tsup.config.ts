@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: { server: 'src/server.ts', migrate: 'src/db/migrate.ts', seed: 'src/db/seed.ts' },
+  entry: {
+    server: 'src/server.ts',
+    migrate: 'src/db/migrate.ts',
+    seed: 'src/db/seed.ts',
+    createAdmin: 'src/db/create-admin.ts',
+  },
   format: ['esm'],
   target: 'node20',
   platform: 'node',

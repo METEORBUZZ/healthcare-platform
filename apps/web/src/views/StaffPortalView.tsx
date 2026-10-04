@@ -54,7 +54,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   const [activeTab, setActiveTab] = useState<
     'CONSULTATIONS' | 'ANALYTICS' | 'DOCTORS' | 'USERS' | 'SHIFTS'
   >(() => {
-    if (!isAdmin && (defaultTab === 'ANALYTICS' || defaultTab === 'DOCTORS' || defaultTab === 'USERS')) {
+    if (
+      !isAdmin &&
+      (defaultTab === 'ANALYTICS' || defaultTab === 'DOCTORS' || defaultTab === 'USERS')
+    ) {
       return 'CONSULTATIONS';
     }
     return defaultTab;
@@ -62,7 +65,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
   // Automatically fall back to CONSULTATIONS if non-admin attempts to access admin-only tabs
   useEffect(() => {
-    if (!isAdmin && (activeTab === 'ANALYTICS' || activeTab === 'DOCTORS' || activeTab === 'USERS')) {
+    if (
+      !isAdmin &&
+      (activeTab === 'ANALYTICS' || activeTab === 'DOCTORS' || activeTab === 'USERS')
+    ) {
       setActiveTab('CONSULTATIONS');
     }
   }, [isAdmin, activeTab]);
@@ -122,7 +128,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
       email: newEmail.trim().toLowerCase(),
       role: newRole === 'DOCTOR' ? 'DOCTOR' : 'ADMIN',
       status: 'ACTIVE',
-      avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
       lastLoginAt: null,
       createdAt: new Date().toISOString(),
     };
@@ -133,7 +140,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
         userId: newId,
         name: formattedName,
         email: newEmail.trim().toLowerCase(),
-        avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
+        avatarUrl:
+          'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
         specialization: newDepartment,
         experienceYears: Number(newExperience) || 5,
         qualification: newQualification || 'MBBS, MD',
@@ -149,8 +157,12 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
     }
 
     setUsers((prev) => [newUser, ...prev]);
-    const dutyShiftType: 'Day Shift' | 'Night Shift' = newShift.includes('Night') ? 'Night Shift' : 'Day Shift';
-    const dutyHours = newShift.includes('Night') ? '20:00 - 08:00 (12 hrs)' : '08:00 - 16:30 (8.5 hrs)';
+    const dutyShiftType: 'Day Shift' | 'Night Shift' = newShift.includes('Night')
+      ? 'Night Shift'
+      : 'Day Shift';
+    const dutyHours = newShift.includes('Night')
+      ? '20:00 - 08:00 (12 hrs)'
+      : '08:00 - 16:30 (8.5 hrs)';
     try {
       const adminOperator: SessionUser = user || {
         id: 1,
@@ -175,7 +187,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           shiftType: dutyShiftType,
           shiftHours: dutyHours,
           dutyDays: 'Mon - Fri',
-          reportingStation: newRole === 'DOCTOR' ? `${newDepartment} OPD Wing` : 'General Clinical Station',
+          reportingStation:
+            newRole === 'DOCTOR' ? `${newDepartment} OPD Wing` : 'General Clinical Station',
           dutyNotes: 'Directly onboarded by Hospital Administration.',
         },
       );
@@ -186,7 +199,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
     setAddStaffLoading(false);
     setShowAddStaffModal(false);
-    setToastMessage(`✓ ${formattedName} successfully onboarded as ${newRole}. Direct credentials & ${dutyShiftType} active.`);
+    setToastMessage(
+      `✓ ${formattedName} successfully onboarded as ${newRole}. Direct credentials & ${dutyShiftType} active.`,
+    );
 
     // Reset fields
     setNewName('');
@@ -195,15 +210,25 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   };
 
   // Duty Shift Roster State
-  const [dutyRoster, setDutyRoster] = useState<DutyShiftRecord[]>(() => shiftRosterService.getDutyRoster());
-  const [shiftPersonnelFilter, setShiftPersonnelFilter] = useState<'ALL' | 'DOCTORS' | 'STAFF'>('ALL');
-  const [shiftTypeFilter, setShiftTypeFilter] = useState<'ALL' | 'DAY' | 'NIGHT' | 'EVENING' | 'EMERGENCY'>('ALL');
+  const [dutyRoster, setDutyRoster] = useState<DutyShiftRecord[]>(() =>
+    shiftRosterService.getDutyRoster(),
+  );
+  const [shiftPersonnelFilter, setShiftPersonnelFilter] = useState<'ALL' | 'DOCTORS' | 'STAFF'>(
+    'ALL',
+  );
+  const [shiftTypeFilter, setShiftTypeFilter] = useState<
+    'ALL' | 'DAY' | 'NIGHT' | 'EVENING' | 'EMERGENCY'
+  >('ALL');
   const [assignModalRecord, setAssignModalRecord] = useState<DutyShiftRecord | null>(null);
-  const [selectedShiftType, setSelectedShiftType] = useState<'Day Shift' | 'Night Shift' | 'Evening Shift' | '24x7 Emergency Rotation'>('Night Shift');
+  const [selectedShiftType, setSelectedShiftType] = useState<
+    'Day Shift' | 'Night Shift' | 'Evening Shift' | '24x7 Emergency Rotation'
+  >('Night Shift');
   const [selectedShiftHours, setSelectedShiftHours] = useState('20:00 - 08:00 (12 hrs)');
   const [selectedShiftDays, setSelectedShiftDays] = useState('Mon - Fri');
   const [selectedStation, setSelectedStation] = useState('Emergency Trauma Ward');
-  const [selectedNotes, setSelectedNotes] = useState('Assigned by Hospital Administration. Oversee patient queue and night telemetry.');
+  const [selectedNotes, setSelectedNotes] = useState(
+    'Assigned by Hospital Administration. Oversee patient queue and night telemetry.',
+  );
   const [assignSubmitting, setAssignSubmitting] = useState(false);
 
   // Sync duty roster with custom events
@@ -218,17 +243,19 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
     };
   }, []);
 
-  const handleShiftTypeChange = (type: 'Day Shift' | 'Night Shift' | 'Evening Shift' | '24x7 Emergency Rotation') => {
+  const handleShiftTypeChange = (
+    type: 'Day Shift' | 'Night Shift' | 'Evening Shift' | '24x7 Emergency Rotation',
+  ) => {
     setSelectedShiftType(type);
     if (type === 'Day Shift') {
       setSelectedShiftHours('08:00 - 16:30 (8.5 hrs)');
-      setSelectedStation((prev) => prev.includes('Ward') ? 'Cardiology OPD Wing B' : prev);
+      setSelectedStation((prev) => (prev.includes('Ward') ? 'Cardiology OPD Wing B' : prev));
     } else if (type === 'Night Shift') {
       setSelectedShiftHours('20:00 - 08:00 (12 hrs)');
-      setSelectedStation((prev) => prev.includes('OPD') ? 'Emergency Trauma Ward' : prev);
+      setSelectedStation((prev) => (prev.includes('OPD') ? 'Emergency Trauma Ward' : prev));
     } else if (type === 'Evening Shift') {
       setSelectedShiftHours('16:00 - 00:30 (8.5 hrs)');
-      setSelectedStation((prev) => prev.includes('OPD') ? 'ICU 3rd Floor' : prev);
+      setSelectedStation((prev) => (prev.includes('OPD') ? 'ICU 3rd Floor' : prev));
     } else if (type === '24x7 Emergency Rotation') {
       setSelectedShiftHours('24-Hour Emergency Triage');
       setSelectedStation('Emergency & Trauma Center');
@@ -275,7 +302,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
       setDutyRoster(shiftRosterService.getDutyRoster());
       setAssignModalRecord(null);
       setToastMessage(
-        `✓ Shift updated for ${result.record.personName} (${result.record.shiftType}). Real-time notification dispatched to device.`
+        `✓ Shift updated for ${result.record.personName} (${result.record.shiftType}). Real-time notification dispatched to device.`,
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to assign duty shift';
@@ -294,7 +321,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
     if (shiftTypeFilter === 'DAY' && item.shiftType !== 'Day Shift') return false;
     if (shiftTypeFilter === 'NIGHT' && item.shiftType !== 'Night Shift') return false;
     if (shiftTypeFilter === 'EVENING' && item.shiftType !== 'Evening Shift') return false;
-    if (shiftTypeFilter === 'EMERGENCY' && item.shiftType !== '24x7 Emergency Rotation') return false;
+    if (shiftTypeFilter === 'EMERGENCY' && item.shiftType !== '24x7 Emergency Rotation')
+      return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       return (
@@ -376,9 +404,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
       await loadData();
     } catch {
       // Offline / local fallback resilience for uninterrupted clinic operations
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status: 'CONFIRMED' } : a))
-      );
+      setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'CONFIRMED' } : a)));
       setToastMessage('Appointment confirmed (Clinical continuity offline mode).');
     } finally {
       setActionLoading(null);
@@ -394,7 +420,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
       setModalError(null);
       await api.updateAppointmentStatus(statusModal.appointment.id, {
         status: statusModal.status,
-        doctorNotes: statusModal.status === 'COMPLETED' ? modalNotes.trim() || undefined : undefined,
+        doctorNotes:
+          statusModal.status === 'COMPLETED' ? modalNotes.trim() || undefined : undefined,
         cancellationReason: statusModal.status === 'CANCELLED' ? modalReason.trim() : undefined,
       });
       setToastMessage(
@@ -415,15 +442,17 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 doctorNotes:
                   statusModal.status === 'COMPLETED' ? modalNotes.trim() || null : a.doctorNotes,
                 cancellationReason:
-                  statusModal.status === 'CANCELLED' ? modalReason.trim() || null : a.cancellationReason,
+                  statusModal.status === 'CANCELLED'
+                    ? modalReason.trim() || null
+                    : a.cancellationReason,
               }
-            : a
-        )
+            : a,
+        ),
       );
       setToastMessage(
         statusModal.status === 'COMPLETED'
           ? 'Consultation marked as completed (Clinical continuity offline mode).'
-          : 'Appointment cancelled (Clinical continuity offline mode).'
+          : 'Appointment cancelled (Clinical continuity offline mode).',
       );
       setStatusModal(null);
     } finally {
@@ -439,14 +468,18 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
     try {
       setUpdatingDoctorId(doctor.id);
       await api.verifyDoctor(doctor.id, !doctor.isVerified);
-      setToastMessage(`Doctor verification updated to ${!doctor.isVerified ? 'Verified' : 'Unverified'}.`);
+      setToastMessage(
+        `Doctor verification updated to ${!doctor.isVerified ? 'Verified' : 'Unverified'}.`,
+      );
       await loadData();
     } catch {
       // Local fallback
       setDoctors((prev) =>
-        prev.map((d) => (d.id === doctor.id ? { ...d, isVerified: !d.isVerified } : d))
+        prev.map((d) => (d.id === doctor.id ? { ...d, isVerified: !d.isVerified } : d)),
       );
-      setToastMessage(`Doctor verification updated to ${!doctor.isVerified ? 'Verified' : 'Unverified'} (Offline mode).`);
+      setToastMessage(
+        `Doctor verification updated to ${!doctor.isVerified ? 'Verified' : 'Unverified'} (Offline mode).`,
+      );
     } finally {
       setUpdatingDoctorId(null);
     }
@@ -456,7 +489,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   const todayDateStr: string = new Date().toISOString().split('T')[0] ?? '';
   const displayedAppointments =
     docFilter === 'TODAY'
-      ? (doctorDashboard?.today ?? appointments.filter((a) => a.date === todayDateStr || Boolean(a.date && a.date.startsWith(todayDateStr))))
+      ? (doctorDashboard?.today ??
+        appointments.filter(
+          (a) => a.date === todayDateStr || Boolean(a.date && a.date.startsWith(todayDateStr)),
+        ))
       : appointments;
 
   const filteredAppointments = displayedAppointments.filter((a) => {
@@ -493,9 +529,15 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
   // Metrics for overview
   const totalConsultations = appointments.length;
-  const todayCount = doctorDashboard?.counts?.today ?? appointments.filter(a => a.date === new Date().toISOString().split('T')[0]).length;
-  const pendingCount = doctorDashboard?.counts?.pendingRequests ?? appointments.filter(a => a.status === 'PENDING').length;
-  const completedCount = doctorDashboard?.counts?.completed ?? appointments.filter(a => a.status === 'COMPLETED').length;
+  const todayCount =
+    doctorDashboard?.counts?.today ??
+    appointments.filter((a) => a.date === new Date().toISOString().split('T')[0]).length;
+  const pendingCount =
+    doctorDashboard?.counts?.pendingRequests ??
+    appointments.filter((a) => a.status === 'PENDING').length;
+  const completedCount =
+    doctorDashboard?.counts?.completed ??
+    appointments.filter((a) => a.status === 'COMPLETED').length;
 
   if (!user) {
     return (
@@ -503,7 +545,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
         <div
           className="card"
           style={{
-            background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(13, 148, 136, 0.05) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(13, 148, 136, 0.05) 100%)',
             border: '2px solid rgba(2, 132, 199, 0.2)',
             borderRadius: '1.25rem',
             padding: '3rem 2rem',
@@ -567,7 +610,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               lineHeight: 1.6,
             }}
           >
-            This is a restricted, internal hospital management portal. Only verified Medical Doctors, Clinical Staff, and Authorized Hospital Administrators may proceed.
+            This is a restricted, internal hospital management portal. Only verified Medical
+            Doctors, Clinical Staff, and Authorized Hospital Administrators may proceed.
           </p>
 
           {/* Quick Role Sign-In Tiles */}
@@ -593,7 +637,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               }}
               onClick={() => (onOpenAuth ? onOpenAuth('DOCTOR') : quickLogin('DOCTOR'))}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  marginBottom: '0.75rem',
+                }}
+              >
                 <div
                   style={{
                     width: '40px',
@@ -609,12 +660,24 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   <Stethoscope size={20} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Medical Doctor</h3>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Consultation Desk & Shifts</div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+                    Medical Doctor
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Consultation Desk & Shifts
+                  </div>
                 </div>
               </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 1rem', lineHeight: 1.4 }}>
-                Review live patient queues, write consultation prescriptions, update vitals, and view duty shift rosters.
+              <p
+                style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--text-secondary)',
+                  margin: '0 0 1rem',
+                  lineHeight: 1.4,
+                }}
+              >
+                Review live patient queues, write consultation prescriptions, update vitals, and
+                view duty shift rosters.
               </p>
               <button
                 type="button"
@@ -628,56 +691,6 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 }}
               >
                 Access as Doctor
-              </button>
-            </div>
-
-            <div
-              className="card"
-              style={{
-                border: '1px solid var(--border)',
-                borderRadius: '1rem',
-                padding: '1.5rem',
-                background: 'var(--bg-card)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                cursor: 'pointer',
-              }}
-              onClick={() => (onOpenAuth ? onOpenAuth('ADMIN') : quickLogin('ADMIN'))}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'rgba(13, 148, 136, 0.15)',
-                    color: '#0d9488',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ShieldAlert size={20} />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Hospital Administrator</h3>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Staff, Doctors & Duty Roster</div>
-                </div>
-              </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 1rem', lineHeight: 1.4 }}>
-                Assign Day/Night shifts, broadcast real-time device notifications, onboard doctors/staff, and inspect analytics.
-              </p>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                style={{
-                  width: '100%',
-                  borderRadius: '8px',
-                  background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                  border: 'none',
-                  fontWeight: 700,
-                }}
-              >
-                Access as Administrator
               </button>
             </div>
           </div>
@@ -716,7 +729,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
       {/* Top Header Hub */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(0, 194, 203, 0.08) 0%, rgba(255, 42, 133, 0.06) 100%)',
+          background:
+            'linear-gradient(135deg, rgba(0, 194, 203, 0.08) 0%, rgba(255, 42, 133, 0.06) 100%)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
           padding: '1.75rem 2rem',
@@ -735,7 +749,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                marginBottom: '0.4rem',
+              }}
+            >
               <span
                 style={{
                   background: 'linear-gradient(135deg, #00C2CB 0%, #0284c7 100%)',
@@ -751,7 +772,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 Unified Staff Hub
               </span>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Active as <strong style={{ color: 'var(--text-primary)' }}>{user?.name}</strong> ({user?.role})
+                Active as <strong style={{ color: 'var(--text-primary)' }}>{user?.name}</strong> (
+                {user?.role})
               </span>
             </div>
             <h1
@@ -773,7 +795,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 maxWidth: '680px',
               }}
             >
-              Manage consultations, live queue, doctor credentials, patient clinical records, and hospital performance metrics in one unified dashboard.
+              Manage consultations, live queue, doctor credentials, patient clinical records, and
+              hospital performance metrics in one unified dashboard.
             </p>
           </div>
 
@@ -841,7 +864,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               cursor: 'pointer',
               border: 'none',
               background: 'transparent',
-              borderBottom: activeTab === 'CONSULTATIONS' ? '3px solid #00C2CB' : '3px solid transparent',
+              borderBottom:
+                activeTab === 'CONSULTATIONS' ? '3px solid #00C2CB' : '3px solid transparent',
               color: activeTab === 'CONSULTATIONS' ? '#00C2CB' : 'var(--text-secondary)',
               display: 'flex',
               alignItems: 'center',
@@ -856,7 +880,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 fontSize: '0.72rem',
                 padding: '0.15rem 0.5rem',
                 borderRadius: '999px',
-                background: activeTab === 'CONSULTATIONS' ? 'rgba(0, 194, 203, 0.15)' : 'var(--bg-card-subtle)',
+                background:
+                  activeTab === 'CONSULTATIONS'
+                    ? 'rgba(0, 194, 203, 0.15)'
+                    : 'var(--bg-card-subtle)',
                 color: activeTab === 'CONSULTATIONS' ? '#00C2CB' : 'var(--text-muted)',
                 fontWeight: 800,
               }}
@@ -879,7 +906,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 cursor: 'pointer',
                 border: 'none',
                 background: 'transparent',
-                borderBottom: activeTab === 'ANALYTICS' ? '3px solid #00C2CB' : '3px solid transparent',
+                borderBottom:
+                  activeTab === 'ANALYTICS' ? '3px solid #00C2CB' : '3px solid transparent',
                 color: activeTab === 'ANALYTICS' ? '#00C2CB' : 'var(--text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
@@ -906,7 +934,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 cursor: 'pointer',
                 border: 'none',
                 background: 'transparent',
-                borderBottom: activeTab === 'DOCTORS' ? '3px solid #00C2CB' : '3px solid transparent',
+                borderBottom:
+                  activeTab === 'DOCTORS' ? '3px solid #00C2CB' : '3px solid transparent',
                 color: activeTab === 'DOCTORS' ? '#00C2CB' : 'var(--text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
@@ -921,7 +950,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   fontSize: '0.72rem',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '999px',
-                  background: activeTab === 'DOCTORS' ? 'rgba(0, 194, 203, 0.15)' : 'var(--bg-card-subtle)',
+                  background:
+                    activeTab === 'DOCTORS' ? 'rgba(0, 194, 203, 0.15)' : 'var(--bg-card-subtle)',
                   color: activeTab === 'DOCTORS' ? '#00C2CB' : 'var(--text-muted)',
                   fontWeight: 800,
                 }}
@@ -960,7 +990,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   fontSize: '0.72rem',
                   padding: '0.15rem 0.5rem',
                   borderRadius: '999px',
-                  background: activeTab === 'USERS' ? 'rgba(0, 194, 203, 0.15)' : 'var(--bg-card-subtle)',
+                  background:
+                    activeTab === 'USERS' ? 'rgba(0, 194, 203, 0.15)' : 'var(--bg-card-subtle)',
                   color: activeTab === 'USERS' ? '#00C2CB' : 'var(--text-muted)',
                   fontWeight: 800,
                 }}
@@ -998,7 +1029,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 fontSize: '0.72rem',
                 padding: '0.15rem 0.5rem',
                 borderRadius: '999px',
-                background: activeTab === 'SHIFTS' ? 'rgba(0, 194, 203, 0.15)' : 'var(--bg-card-subtle)',
+                background:
+                  activeTab === 'SHIFTS' ? 'rgba(0, 194, 203, 0.15)' : 'var(--bg-card-subtle)',
                 color: activeTab === 'SHIFTS' ? '#00C2CB' : 'var(--text-muted)',
                 fontWeight: 800,
               }}
@@ -1100,8 +1132,21 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       {myShift.shiftType === 'Night Shift' ? <Moon size={22} /> : <Sun size={22} />}
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '1rem',
+                            fontWeight: 800,
+                            color: 'var(--text-primary)',
+                          }}
+                        >
                           Active Duty Shift: {myShift.shiftType}
                         </span>
                         <span
@@ -1110,8 +1155,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                             fontWeight: 800,
                             padding: '0.2rem 0.65rem',
                             borderRadius: '999px',
-                            background:
-                              myShift.shiftType === 'Night Shift' ? '#312e81' : '#0369a1',
+                            background: myShift.shiftType === 'Night Shift' ? '#312e81' : '#0369a1',
                             color: '#ffffff',
                             letterSpacing: '0.02em',
                           }}
@@ -1134,10 +1178,20 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                           <Smartphone size={11} /> Real-time Terminal Synced
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        Station: <strong style={{ color: 'var(--text-primary)' }}>{myShift.reportingStation}</strong> · Days:{' '}
-                        <strong style={{ color: 'var(--text-primary)' }}>{myShift.dutyDays}</strong> · Assigned by{' '}
-                        <strong>{myShift.assignedByAdmin}</strong>
+                      <div
+                        style={{
+                          fontSize: '0.82rem',
+                          color: 'var(--text-muted)',
+                          marginTop: '4px',
+                        }}
+                      >
+                        Station:{' '}
+                        <strong style={{ color: 'var(--text-primary)' }}>
+                          {myShift.reportingStation}
+                        </strong>{' '}
+                        · Days:{' '}
+                        <strong style={{ color: 'var(--text-primary)' }}>{myShift.dutyDays}</strong>{' '}
+                        · Assigned by <strong>{myShift.assignedByAdmin}</strong>
                       </div>
                     </div>
                   </div>
@@ -1170,7 +1224,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   marginBottom: '2rem',
                 }}
               >
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1186,12 +1243,17 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     <Calendar size={22} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Today's Queue</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Today's Queue
+                    </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{todayCount}</div>
                   </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1207,12 +1269,17 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     <Clock size={22} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pending Requests</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Pending Requests
+                    </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{pendingCount}</div>
                   </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1233,7 +1300,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1249,7 +1319,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     <Activity size={22} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Consultations</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Total Consultations
+                    </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{totalConsultations}</div>
                   </div>
                 </div>
@@ -1298,10 +1370,16 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               {filteredAppointments.length === 0 ? (
                 <div
                   className="card"
-                  style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-muted)' }}
+                  style={{
+                    textAlign: 'center',
+                    padding: '3.5rem 1rem',
+                    color: 'var(--text-muted)',
+                  }}
                 >
                   <Calendar size={40} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>No consultations scheduled</h3>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    No consultations scheduled
+                  </h3>
                   <p style={{ fontSize: '0.85rem' }}>
                     {docFilter === 'TODAY'
                       ? "Today's queue is completely clear."
@@ -1313,12 +1391,13 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   {filteredAppointments.map((apt) => {
                     const isPending = apt.status === 'PENDING';
                     const isConfirmed = apt.status === 'CONFIRMED';
-                    const badgeClass = {
-                      CONFIRMED: 'badge-success',
-                      PENDING: 'badge-warning',
-                      COMPLETED: 'badge-primary',
-                      CANCELLED: 'badge-danger',
-                    }[apt.status] || 'badge-info';
+                    const badgeClass =
+                      {
+                        CONFIRMED: 'badge-success',
+                        PENDING: 'badge-warning',
+                        COMPLETED: 'badge-primary',
+                        CANCELLED: 'badge-danger',
+                      }[apt.status] || 'badge-info';
 
                     return (
                       <div
@@ -1353,7 +1432,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                           </div>
 
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                flexWrap: 'wrap',
+                              }}
+                            >
                               <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
                                 {apt.patient?.name || 'Patient'}
                               </h4>
@@ -1371,7 +1457,13 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                               </span>
                             </div>
 
-                            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                            <div
+                              style={{
+                                fontSize: '0.82rem',
+                                color: 'var(--text-secondary)',
+                                marginTop: '0.2rem',
+                              }}
+                            >
                               <strong>Reason:</strong> {apt.reason}
                             </div>
 
@@ -1412,7 +1504,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                         </div>
 
                         {/* Timing & Action Controls */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1.25rem',
+                            flexWrap: 'wrap',
+                          }}
+                        >
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{apt.date}</div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1495,7 +1594,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   marginBottom: '2rem',
                 }}
               >
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1511,12 +1613,19 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     <Users size={22} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Users</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{adminDashboard.counts.users}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Total Users
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                      {adminDashboard.counts.users}
+                    </div>
                   </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1532,12 +1641,19 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     <Stethoscope size={22} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Doctors Onboarded</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{adminDashboard.counts.doctors}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Doctors Onboarded
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                      {adminDashboard.counts.doctors}
+                    </div>
                   </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1553,14 +1669,19 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     <ShieldAlert size={22} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Awaiting Verification</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Awaiting Verification
+                    </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
                       {adminDashboard.counts.doctorsAwaitingVerification}
                     </div>
                   </div>
                 </div>
 
-                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
                   <div
                     style={{
                       width: '46px',
@@ -1576,7 +1697,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     <Calendar size={22} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Consultations</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Total Consultations
+                    </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
                       {adminDashboard.counts.appointments}
                     </div>
@@ -1721,9 +1844,18 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 </div>
               </div>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  textAlign: 'left',
+                  fontSize: '0.875rem',
+                }}
+              >
                 <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
+                  <tr
+                    style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}
+                  >
                     <th style={{ padding: '0.75rem' }}>Doctor</th>
                     <th style={{ padding: '0.75rem' }}>Specialization</th>
                     <th style={{ padding: '0.75rem' }}>Experience</th>
@@ -1755,7 +1887,13 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                           </div>
                           <div>
                             <div>{doc.name}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                            <div
+                              style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--text-muted)',
+                                fontWeight: 400,
+                              }}
+                            >
                               {doc.qualification}
                             </div>
                           </div>
@@ -1765,14 +1903,22 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                         {doc.specialization}
                       </td>
                       <td style={{ padding: '0.75rem' }}>{doc.experienceYears} yrs</td>
-                      <td style={{ padding: '0.75rem', fontWeight: 700 }}>₹{doc.consultationFee}</td>
+                      <td style={{ padding: '0.75rem', fontWeight: 700 }}>
+                        ₹{doc.consultationFee}
+                      </td>
                       <td style={{ padding: '0.75rem' }}>
                         {doc.isVerified ? (
-                          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span
+                            className="badge badge-success"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
                             <CheckCircle size={12} /> Verified
                           </span>
                         ) : (
-                          <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span
+                            className="badge badge-warning"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
                             <XCircle size={12} /> Unverified
                           </span>
                         )}
@@ -1790,8 +1936,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                           {updatingDoctorId === doc.id
                             ? 'Updating...'
                             : doc.isVerified
-                            ? 'Revoke'
-                            : 'Verify Doctor'}
+                              ? 'Revoke'
+                              : 'Verify Doctor'}
                         </button>
                       </td>
                     </tr>
@@ -1855,9 +2001,18 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 </div>
               </div>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  textAlign: 'left',
+                  fontSize: '0.875rem',
+                }}
+              >
                 <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}>
+                  <tr
+                    style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-muted)' }}
+                  >
                     <th style={{ padding: '0.75rem' }}>ID</th>
                     <th style={{ padding: '0.75rem' }}>Name</th>
                     <th style={{ padding: '0.75rem' }}>Email</th>
@@ -1879,8 +2034,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                             u.role === 'ADMIN'
                               ? 'badge-danger'
                               : u.role === 'DOCTOR'
-                              ? 'badge-primary'
-                              : 'badge-info'
+                                ? 'badge-primary'
+                                : 'badge-info'
                           }`}
                         >
                           {u.role}
@@ -1889,7 +2044,13 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       <td style={{ padding: '0.75rem' }}>
                         <span className="badge badge-success">{u.status}</span>
                       </td>
-                      <td style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      <td
+                        style={{
+                          padding: '0.75rem',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.8rem',
+                        }}
+                      >
                         {new Date(u.createdAt).toLocaleDateString()}
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'right' }}>
@@ -2008,7 +2169,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   </div>
 
                   {/* Shift Summary Metrics */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     <div
                       style={{
                         padding: '0.65rem 1rem',
@@ -2022,7 +2190,13 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     >
                       <Sun size={18} color="#0284c7" />
                       <div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: 600,
+                          }}
+                        >
                           DAY SHIFTS
                         </div>
                         <div style={{ fontSize: '1.05rem', fontWeight: 800 }}>
@@ -2044,7 +2218,13 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     >
                       <Moon size={18} color="#6366f1" />
                       <div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: 600,
+                          }}
+                        >
                           NIGHT SHIFTS
                         </div>
                         <div style={{ fontSize: '1.05rem', fontWeight: 800 }}>
@@ -2066,7 +2246,13 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     >
                       <Smartphone size={18} color="#10b981" />
                       <div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: 600,
+                          }}
+                        >
                           DEVICE NOTIFIED
                         </div>
                         <div style={{ fontSize: '1.05rem', fontWeight: 800 }}>
@@ -2124,10 +2310,21 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                               : '0 6px 18px rgba(2, 132, 199, 0.3)',
                         }}
                       >
-                        {myShift.shiftType === 'Night Shift' ? <Moon size={26} /> : <Sun size={26} />}
+                        {myShift.shiftType === 'Night Shift' ? (
+                          <Moon size={26} />
+                        ) : (
+                          <Sun size={26} />
+                        )}
                       </div>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            flexWrap: 'wrap',
+                          }}
+                        >
                           <span
                             style={{
                               fontSize: '0.78rem',
@@ -2145,7 +2342,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                               fontWeight: 800,
                               padding: '0.15rem 0.6rem',
                               borderRadius: '999px',
-                              background: myShift.shiftType === 'Night Shift' ? '#4338ca' : '#0284c7',
+                              background:
+                                myShift.shiftType === 'Night Shift' ? '#4338ca' : '#0284c7',
                               color: '#ffffff',
                             }}
                           >
@@ -2153,12 +2351,25 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                           </span>
                         </div>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0.2rem 0' }}>
-                          {myShift.personName} ({myShift.role === 'DOCTOR' ? 'Attending Physician' : 'Clinical Nursing Staff'})
+                          {myShift.personName} (
+                          {myShift.role === 'DOCTOR'
+                            ? 'Attending Physician'
+                            : 'Clinical Nursing Staff'}
+                          )
                         </h3>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          Duty Hours: <strong style={{ color: 'var(--text-primary)' }}>{myShift.shiftHours}</strong> · Days:{' '}
-                          <strong style={{ color: 'var(--text-primary)' }}>{myShift.dutyDays}</strong> · Station:{' '}
-                          <strong style={{ color: 'var(--text-primary)' }}>{myShift.reportingStation}</strong>
+                          Duty Hours:{' '}
+                          <strong style={{ color: 'var(--text-primary)' }}>
+                            {myShift.shiftHours}
+                          </strong>{' '}
+                          · Days:{' '}
+                          <strong style={{ color: 'var(--text-primary)' }}>
+                            {myShift.dutyDays}
+                          </strong>{' '}
+                          · Station:{' '}
+                          <strong style={{ color: 'var(--text-primary)' }}>
+                            {myShift.reportingStation}
+                          </strong>
                         </div>
                       </div>
                     </div>
@@ -2200,7 +2411,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 }}
               >
                 {/* Personnel Filter */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}
+                >
                   <button
                     onClick={() => setShiftPersonnelFilter('ALL')}
                     style={{
@@ -2208,8 +2421,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       borderRadius: '999px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      border: shiftPersonnelFilter === 'ALL' ? '2px solid #0284c7' : '1px solid var(--border)',
-                      background: shiftPersonnelFilter === 'ALL' ? 'rgba(2, 132, 199, 0.12)' : 'var(--bg-card)',
+                      border:
+                        shiftPersonnelFilter === 'ALL'
+                          ? '2px solid #0284c7'
+                          : '1px solid var(--border)',
+                      background:
+                        shiftPersonnelFilter === 'ALL'
+                          ? 'rgba(2, 132, 199, 0.12)'
+                          : 'var(--bg-card)',
                       color: shiftPersonnelFilter === 'ALL' ? '#0284c7' : 'var(--text-secondary)',
                       cursor: 'pointer',
                     }}
@@ -2223,16 +2442,24 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       borderRadius: '999px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      border: shiftPersonnelFilter === 'DOCTORS' ? '2px solid #0284c7' : '1px solid var(--border)',
-                      background: shiftPersonnelFilter === 'DOCTORS' ? 'rgba(2, 132, 199, 0.12)' : 'var(--bg-card)',
-                      color: shiftPersonnelFilter === 'DOCTORS' ? '#0284c7' : 'var(--text-secondary)',
+                      border:
+                        shiftPersonnelFilter === 'DOCTORS'
+                          ? '2px solid #0284c7'
+                          : '1px solid var(--border)',
+                      background:
+                        shiftPersonnelFilter === 'DOCTORS'
+                          ? 'rgba(2, 132, 199, 0.12)'
+                          : 'var(--bg-card)',
+                      color:
+                        shiftPersonnelFilter === 'DOCTORS' ? '#0284c7' : 'var(--text-secondary)',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.35rem',
                     }}
                   >
-                    <Stethoscope size={13} /> Doctors ({dutyRoster.filter((r) => r.role === 'DOCTOR').length})
+                    <Stethoscope size={13} /> Doctors (
+                    {dutyRoster.filter((r) => r.role === 'DOCTOR').length})
                   </button>
                   <button
                     onClick={() => setShiftPersonnelFilter('STAFF')}
@@ -2241,8 +2468,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       borderRadius: '999px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      border: shiftPersonnelFilter === 'STAFF' ? '2px solid #0d9488' : '1px solid var(--border)',
-                      background: shiftPersonnelFilter === 'STAFF' ? 'rgba(13, 148, 136, 0.12)' : 'var(--bg-card)',
+                      border:
+                        shiftPersonnelFilter === 'STAFF'
+                          ? '2px solid #0d9488'
+                          : '1px solid var(--border)',
+                      background:
+                        shiftPersonnelFilter === 'STAFF'
+                          ? 'rgba(13, 148, 136, 0.12)'
+                          : 'var(--bg-card)',
                       color: shiftPersonnelFilter === 'STAFF' ? '#0d9488' : 'var(--text-secondary)',
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -2250,12 +2483,15 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       gap: '0.35rem',
                     }}
                   >
-                    <Users size={13} /> Staff ({dutyRoster.filter((r) => r.role === 'STAFF').length})
+                    <Users size={13} /> Staff ({dutyRoster.filter((r) => r.role === 'STAFF').length}
+                    )
                   </button>
                 </div>
 
                 {/* Shift Type Filter */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}
+                >
                   <button
                     onClick={() => setShiftTypeFilter('ALL')}
                     style={{
@@ -2263,8 +2499,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       borderRadius: '8px',
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      border: shiftTypeFilter === 'ALL' ? '1px solid #0284c7' : '1px solid var(--border)',
-                      background: shiftTypeFilter === 'ALL' ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
+                      border:
+                        shiftTypeFilter === 'ALL' ? '1px solid #0284c7' : '1px solid var(--border)',
+                      background:
+                        shiftTypeFilter === 'ALL' ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
                       color: shiftTypeFilter === 'ALL' ? '#0284c7' : 'var(--text-muted)',
                       cursor: 'pointer',
                     }}
@@ -2278,8 +2516,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       borderRadius: '8px',
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      border: shiftTypeFilter === 'DAY' ? '1px solid #0284c7' : '1px solid var(--border)',
-                      background: shiftTypeFilter === 'DAY' ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
+                      border:
+                        shiftTypeFilter === 'DAY' ? '1px solid #0284c7' : '1px solid var(--border)',
+                      background:
+                        shiftTypeFilter === 'DAY' ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
                       color: shiftTypeFilter === 'DAY' ? '#0284c7' : 'var(--text-muted)',
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -2296,8 +2536,12 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       borderRadius: '8px',
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      border: shiftTypeFilter === 'NIGHT' ? '1px solid #6366f1' : '1px solid var(--border)',
-                      background: shiftTypeFilter === 'NIGHT' ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
+                      border:
+                        shiftTypeFilter === 'NIGHT'
+                          ? '1px solid #6366f1'
+                          : '1px solid var(--border)',
+                      background:
+                        shiftTypeFilter === 'NIGHT' ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
                       color: shiftTypeFilter === 'NIGHT' ? '#6366f1' : 'var(--text-muted)',
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -2314,8 +2558,12 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       borderRadius: '8px',
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      border: shiftTypeFilter === 'EVENING' ? '1px solid #d97706' : '1px solid var(--border)',
-                      background: shiftTypeFilter === 'EVENING' ? 'rgba(217, 119, 6, 0.12)' : 'transparent',
+                      border:
+                        shiftTypeFilter === 'EVENING'
+                          ? '1px solid #d97706'
+                          : '1px solid var(--border)',
+                      background:
+                        shiftTypeFilter === 'EVENING' ? 'rgba(217, 119, 6, 0.12)' : 'transparent',
                       color: shiftTypeFilter === 'EVENING' ? '#d97706' : 'var(--text-muted)',
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -2331,7 +2579,14 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               {/* Duty Roster Table */}
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                  <table
+                    style={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      textAlign: 'left',
+                      fontSize: '0.88rem',
+                    }}
+                  >
                     <thead>
                       <tr
                         style={{
@@ -2349,7 +2604,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                         <th style={{ padding: '0.9rem 1rem' }}>Station / Ward</th>
                         <th style={{ padding: '0.9rem 1rem' }}>Schedule Days</th>
                         <th style={{ padding: '0.9rem 1rem' }}>Device Alert Status</th>
-                        <th style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>Admin Control</th>
+                        <th style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>
+                          Admin Control
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2368,7 +2625,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                           >
                             {/* Personnel info */}
                             <td style={{ padding: '1rem 1.25rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <div
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+                              >
                                 <div
                                   style={{
                                     width: '40px',
@@ -2436,27 +2695,33 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                                   background: isNight
                                     ? 'rgba(99, 102, 241, 0.14)'
                                     : isDay
-                                    ? 'rgba(2, 132, 199, 0.14)'
-                                    : isEvening
-                                    ? 'rgba(217, 119, 6, 0.14)'
-                                    : 'rgba(244, 63, 94, 0.14)',
+                                      ? 'rgba(2, 132, 199, 0.14)'
+                                      : isEvening
+                                        ? 'rgba(217, 119, 6, 0.14)'
+                                        : 'rgba(244, 63, 94, 0.14)',
                                   color: isNight
                                     ? '#6366f1'
                                     : isDay
-                                    ? '#0284c7'
-                                    : isEvening
-                                    ? '#d97706'
-                                    : '#e11d48',
+                                      ? '#0284c7'
+                                      : isEvening
+                                        ? '#d97706'
+                                        : '#e11d48',
                                   border: isNight
                                     ? '1px solid rgba(99, 102, 241, 0.3)'
                                     : isDay
-                                    ? '1px solid rgba(2, 132, 199, 0.3)'
-                                    : isEvening
-                                    ? '1px solid rgba(217, 119, 6, 0.3)'
-                                    : '1px solid rgba(244, 63, 94, 0.3)',
+                                      ? '1px solid rgba(2, 132, 199, 0.3)'
+                                      : isEvening
+                                        ? '1px solid rgba(217, 119, 6, 0.3)'
+                                        : '1px solid rgba(244, 63, 94, 0.3)',
                                 }}
                               >
-                                {isNight ? <Moon size={13} /> : isDay ? <Sun size={13} /> : <Clock size={13} />}
+                                {isNight ? (
+                                  <Moon size={13} />
+                                ) : isDay ? (
+                                  <Sun size={13} />
+                                ) : (
+                                  <Clock size={13} />
+                                )}
                                 {person.shiftType}
                               </span>
                             </td>
@@ -2467,8 +2732,16 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                             </td>
 
                             {/* Station / Ward */}
-                            <td style={{ padding: '1rem', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
-                              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{person.reportingStation}</div>
+                            <td
+                              style={{
+                                padding: '1rem',
+                                fontSize: '0.84rem',
+                                color: 'var(--text-secondary)',
+                              }}
+                            >
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {person.reportingStation}
+                              </div>
                               <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                                 Updated {new Date(person.assignedAt).toLocaleDateString()}
                               </div>
@@ -2562,12 +2835,17 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
           >
             <div className="modal-header">
               <div>
-                <h3 id="staff-status-modal-title" style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
-                  {statusModal.status === 'COMPLETED' ? 'Complete Consultation' : 'Cancel Appointment'}
+                <h3
+                  id="staff-status-modal-title"
+                  style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}
+                >
+                  {statusModal.status === 'COMPLETED'
+                    ? 'Complete Consultation'
+                    : 'Cancel Appointment'}
                 </h3>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Patient: {statusModal.appointment.patient?.name} • {statusModal.appointment.date} at{' '}
-                  {statusModal.appointment.time}
+                  Patient: {statusModal.appointment.patient?.name} • {statusModal.appointment.date}{' '}
+                  at {statusModal.appointment.time}
                 </div>
               </div>
               <button
@@ -2587,7 +2865,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
             </div>
 
             <form onSubmit={handleModalSubmit}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div
+                className="modal-body"
+                style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+              >
                 {modalError && (
                   <div
                     role="alert"
@@ -2639,7 +2920,9 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                         <option value="Clinic closed / Operational reason">
                           Clinic closed / Operational reason
                         </option>
-                        <option value="Other administrative reason">Other administrative reason</option>
+                        <option value="Other administrative reason">
+                          Other administrative reason
+                        </option>
                       </select>
                     </div>
                   </>
@@ -2658,13 +2941,15 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 <button
                   type="submit"
                   disabled={modalSubmitting}
-                  className={statusModal.status === 'COMPLETED' ? 'btn btn-primary' : 'btn btn-danger'}
+                  className={
+                    statusModal.status === 'COMPLETED' ? 'btn btn-primary' : 'btn btn-danger'
+                  }
                 >
                   {modalSubmitting
                     ? 'Updating...'
                     : statusModal.status === 'COMPLETED'
-                    ? 'Confirm & Mark Completed'
-                    : 'Confirm Cancellation'}
+                      ? 'Confirm & Mark Completed'
+                      : 'Confirm Cancellation'}
                 </button>
               </div>
             </form>
@@ -2707,7 +2992,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
             <div
               style={{
                 padding: '1.4rem 1.6rem 1.1rem 1.6rem',
-                background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(13, 148, 136, 0.06) 100%)',
+                background:
+                  'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(13, 148, 136, 0.06) 100%)',
                 borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
@@ -2731,10 +3017,15 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   <UserPlus size={20} />
                 </div>
                 <div>
-                  <h3 id="add-staff-modal-title" style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
+                  <h3
+                    id="add-staff-modal-title"
+                    style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}
+                  >
                     Direct Staff & Doctor Onboarding
                   </h3>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  <div
+                    style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}
+                  >
                     Hospital Admin Desk · Issue clinical credentials
                   </div>
                 </div>
@@ -2762,10 +3053,22 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
             {/* Form */}
             <form onSubmit={handleAddDoctorOrStaff}>
-              <div style={{ padding: '1.4rem 1.6rem', maxHeight: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div
+                style={{
+                  padding: '1.4rem 1.6rem',
+                  maxHeight: '70vh',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                }}
+              >
                 {/* Role Switcher */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.4rem' }}>
+                  <label
+                    className="form-label"
+                    style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.4rem' }}
+                  >
                     Select Professional Role
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -2775,8 +3078,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       style={{
                         padding: '0.65rem',
                         borderRadius: '10px',
-                        border: newRole === 'DOCTOR' ? '2px solid #0284c7' : '1px solid var(--border)',
-                        background: newRole === 'DOCTOR' ? 'rgba(2, 132, 199, 0.08)' : 'var(--bg-card)',
+                        border:
+                          newRole === 'DOCTOR' ? '2px solid #0284c7' : '1px solid var(--border)',
+                        background:
+                          newRole === 'DOCTOR' ? 'rgba(2, 132, 199, 0.08)' : 'var(--bg-card)',
                         color: newRole === 'DOCTOR' ? '#0284c7' : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.82rem',
@@ -2795,8 +3100,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       style={{
                         padding: '0.65rem',
                         borderRadius: '10px',
-                        border: newRole === 'STAFF' ? '2px solid #0d9488' : '1px solid var(--border)',
-                        background: newRole === 'STAFF' ? 'rgba(13, 148, 136, 0.08)' : 'var(--bg-card)',
+                        border:
+                          newRole === 'STAFF' ? '2px solid #0d9488' : '1px solid var(--border)',
+                        background:
+                          newRole === 'STAFF' ? 'rgba(13, 148, 136, 0.08)' : 'var(--bg-card)',
                         color: newRole === 'STAFF' ? '#0d9488' : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.82rem',
@@ -2814,14 +3121,19 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
                 {/* Full Name */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                  <label
+                    className="form-label"
+                    style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                  >
                     Full Name <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
                     type="text"
                     required
                     className="form-input"
-                    placeholder={newRole === 'DOCTOR' ? 'e.g. Dr. Rajesh Sharma' : 'e.g. Sister Ananya Roy'}
+                    placeholder={
+                      newRole === 'DOCTOR' ? 'e.g. Dr. Rajesh Sharma' : 'e.g. Sister Ananya Roy'
+                    }
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     style={{ borderRadius: '10px' }}
@@ -2830,7 +3142,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
                 {/* Email Address */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                  <label
+                    className="form-label"
+                    style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                  >
                     Official Hospital Email <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
@@ -2847,20 +3162,28 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 {/* Department / Specialization */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                    <label
+                      className="form-label"
+                      style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                    >
                       {newRole === 'DOCTOR' ? 'Specialization' : 'Department'}
                     </label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder={newRole === 'DOCTOR' ? 'e.g. Cardiology' : 'e.g. Critical Care ICU'}
+                      placeholder={
+                        newRole === 'DOCTOR' ? 'e.g. Cardiology' : 'e.g. Critical Care ICU'
+                      }
                       value={newDepartment}
                       onChange={(e) => setNewDepartment(e.target.value)}
                       style={{ borderRadius: '10px' }}
                     />
                   </div>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                    <label
+                      className="form-label"
+                      style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                    >
                       Qualifications
                     </label>
                     <input
@@ -2877,7 +3200,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 {/* Shift Schedule & Fees / Experience */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                    <label
+                      className="form-label"
+                      style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                    >
                       Duty Shift Allocation
                     </label>
                     <select
@@ -2886,14 +3212,23 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       onChange={(e) => setNewShift(e.target.value)}
                       style={{ borderRadius: '10px' }}
                     >
-                      <option value="Day Shift (08:00 - 16:30)">☀️ Day Shift (08:00 - 16:30)</option>
-                      <option value="Night Shift (20:00 - 08:00)">🌙 Night Shift (20:00 - 08:00)</option>
-                      <option value="Evening Shift (15:00 - 23:30)">🌆 Evening Shift (15:00 - 23:30)</option>
+                      <option value="Day Shift (08:00 - 16:30)">
+                        ☀️ Day Shift (08:00 - 16:30)
+                      </option>
+                      <option value="Night Shift (20:00 - 08:00)">
+                        🌙 Night Shift (20:00 - 08:00)
+                      </option>
+                      <option value="Evening Shift (15:00 - 23:30)">
+                        🌆 Evening Shift (15:00 - 23:30)
+                      </option>
                       <option value="24x7 Emergency Rotation">🚨 24×7 Emergency Rotation</option>
                     </select>
                   </div>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                    <label
+                      className="form-label"
+                      style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                    >
                       {newRole === 'DOCTOR' ? 'Consultation Fee (₹)' : 'Experience (Years)'}
                     </label>
                     <input
@@ -2921,7 +3256,8 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     color: 'var(--text-secondary)',
                   }}
                 >
-                  🔒 Initial login password for this employee will be set to: <strong>Demo@12345</strong>. They can change it upon first login.
+                  🔒 Initial login password for this employee will be set to:{' '}
+                  <strong>Demo@12345</strong>. They can change it upon first login.
                 </div>
               </div>
 
@@ -3026,11 +3362,20 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                   <Clock size={20} />
                 </div>
                 <div>
-                  <h3 id="shift-assign-modal-title" style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>
+                  <h3
+                    id="shift-assign-modal-title"
+                    style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}
+                  >
                     Assign Duty Shift & Dispatch Alert
                   </h3>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Target: <strong style={{ color: 'var(--text-primary)' }}>{assignModalRecord.personName}</strong> ({assignModalRecord.department})
+                  <div
+                    style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}
+                  >
+                    Target:{' '}
+                    <strong style={{ color: 'var(--text-primary)' }}>
+                      {assignModalRecord.personName}
+                    </strong>{' '}
+                    ({assignModalRecord.department})
                   </div>
                 </div>
               </div>
@@ -3069,7 +3414,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               >
                 {/* Shift Type Selection */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.4rem' }}>
+                  <label
+                    className="form-label"
+                    style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.4rem' }}
+                  >
                     Select Duty Shift (Admin Only)
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
@@ -3079,9 +3427,16 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       style={{
                         padding: '0.75rem',
                         borderRadius: '12px',
-                        border: selectedShiftType === 'Day Shift' ? '2px solid #0284c7' : '1px solid var(--border)',
-                        background: selectedShiftType === 'Day Shift' ? 'rgba(2, 132, 199, 0.1)' : 'var(--bg-card)',
-                        color: selectedShiftType === 'Day Shift' ? '#0284c7' : 'var(--text-secondary)',
+                        border:
+                          selectedShiftType === 'Day Shift'
+                            ? '2px solid #0284c7'
+                            : '1px solid var(--border)',
+                        background:
+                          selectedShiftType === 'Day Shift'
+                            ? 'rgba(2, 132, 199, 0.1)'
+                            : 'var(--bg-card)',
+                        color:
+                          selectedShiftType === 'Day Shift' ? '#0284c7' : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.84rem',
                         cursor: 'pointer',
@@ -3101,9 +3456,16 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       style={{
                         padding: '0.75rem',
                         borderRadius: '12px',
-                        border: selectedShiftType === 'Night Shift' ? '2px solid #6366f1' : '1px solid var(--border)',
-                        background: selectedShiftType === 'Night Shift' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
-                        color: selectedShiftType === 'Night Shift' ? '#6366f1' : 'var(--text-secondary)',
+                        border:
+                          selectedShiftType === 'Night Shift'
+                            ? '2px solid #6366f1'
+                            : '1px solid var(--border)',
+                        background:
+                          selectedShiftType === 'Night Shift'
+                            ? 'rgba(99, 102, 241, 0.12)'
+                            : 'var(--bg-card)',
+                        color:
+                          selectedShiftType === 'Night Shift' ? '#6366f1' : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.84rem',
                         cursor: 'pointer',
@@ -3123,9 +3485,18 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       style={{
                         padding: '0.75rem',
                         borderRadius: '12px',
-                        border: selectedShiftType === 'Evening Shift' ? '2px solid #d97706' : '1px solid var(--border)',
-                        background: selectedShiftType === 'Evening Shift' ? 'rgba(217, 119, 6, 0.12)' : 'var(--bg-card)',
-                        color: selectedShiftType === 'Evening Shift' ? '#d97706' : 'var(--text-secondary)',
+                        border:
+                          selectedShiftType === 'Evening Shift'
+                            ? '2px solid #d97706'
+                            : '1px solid var(--border)',
+                        background:
+                          selectedShiftType === 'Evening Shift'
+                            ? 'rgba(217, 119, 6, 0.12)'
+                            : 'var(--bg-card)',
+                        color:
+                          selectedShiftType === 'Evening Shift'
+                            ? '#d97706'
+                            : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.84rem',
                         cursor: 'pointer',
@@ -3145,9 +3516,18 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                       style={{
                         padding: '0.75rem',
                         borderRadius: '12px',
-                        border: selectedShiftType === '24x7 Emergency Rotation' ? '2px solid #e11d48' : '1px solid var(--border)',
-                        background: selectedShiftType === '24x7 Emergency Rotation' ? 'rgba(244, 63, 94, 0.12)' : 'var(--bg-card)',
-                        color: selectedShiftType === '24x7 Emergency Rotation' ? '#e11d48' : 'var(--text-secondary)',
+                        border:
+                          selectedShiftType === '24x7 Emergency Rotation'
+                            ? '2px solid #e11d48'
+                            : '1px solid var(--border)',
+                        background:
+                          selectedShiftType === '24x7 Emergency Rotation'
+                            ? 'rgba(244, 63, 94, 0.12)'
+                            : 'var(--bg-card)',
+                        color:
+                          selectedShiftType === '24x7 Emergency Rotation'
+                            ? '#e11d48'
+                            : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.84rem',
                         cursor: 'pointer',
@@ -3166,7 +3546,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 {/* Duty Hours & Schedule Days */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                    <label
+                      className="form-label"
+                      style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                    >
                       Duty Hours
                     </label>
                     <input
@@ -3180,7 +3563,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                    <label
+                      className="form-label"
+                      style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                    >
                       Duty Days
                     </label>
                     <input
@@ -3197,7 +3583,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
                 {/* Hospital Ward / Station */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                  <label
+                    className="form-label"
+                    style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                  >
                     Station / Ward Assignment
                   </label>
                   <input
@@ -3213,7 +3602,10 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
 
                 {/* Clinical Directives / Shift Notes */}
                 <div>
-                  <label className="form-label" style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                  <label
+                    className="form-label"
+                    style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.35rem' }}
+                  >
                     Duty Notes & Clinical Instructions
                   </label>
                   <textarea
@@ -3239,13 +3631,28 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                     gap: '0.65rem',
                   }}
                 >
-                  <Smartphone size={20} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <Smartphone
+                    size={20}
+                    color="#10b981"
+                    style={{ flexShrink: 0, marginTop: '2px' }}
+                  />
                   <div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    <div
+                      style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}
+                    >
                       Instant Device Alert Dispatch
                     </div>
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.4 }}>
-                      Submitting this shift immediately broadcasts a push alert and slide-down banner to {assignModalRecord.personName}'s device informing them of their <strong>{selectedShiftType}</strong> ({selectedShiftHours}).
+                    <div
+                      style={{
+                        fontSize: '0.76rem',
+                        color: 'var(--text-secondary)',
+                        marginTop: '2px',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Submitting this shift immediately broadcasts a push alert and slide-down
+                      banner to {assignModalRecord.personName}'s device informing them of their{' '}
+                      <strong>{selectedShiftType}</strong> ({selectedShiftHours}).
                     </div>
                   </div>
                 </div>

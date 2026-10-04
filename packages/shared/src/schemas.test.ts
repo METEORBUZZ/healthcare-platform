@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { canTransition } from './constants';
-import { availabilitySchema, createAppointmentSchema, passwordSchema, registerSchema } from './schemas';
+import {
+  availabilitySchema,
+  changePasswordSchema,
+  createAppointmentSchema,
+  passwordSchema,
+  registerSchema,
+} from './schemas';
 
 describe('passwordSchema', () => {
   it('rejects short and letter-only passwords', () => {
@@ -9,6 +15,46 @@ describe('passwordSchema', () => {
   });
   it('accepts letters + digits', () => {
     expect(passwordSchema.safeParse('abcdefg1').success).toBe(true);
+  });
+});
+
+describe('changePasswordSchema', () => {
+  it('rejects empty current password', () => {
+    const res = changePasswordSchema.safeParse({
+      currentPassword: '',
+      newPassword: 'ValidPassword123',
+    });
+    expect(res.success).toBe(false);
+  });
+  it('rejects weak new password', () => {
+    const res = changePasswordSchema.safeParse({
+      currentPassword: 'OldPassword123',
+      newPassword: 'weak',
+    });
+    expect(res.success).toBe(false);
+  });
+  it('rejects new password equal to current password', () => {
+    const res = changePasswordSchema.safeParse({
+      currentPassword: 'SamePassword123',
+      newPassword: 'SamePassword123',
+    });
+    expect(res.success).toBe(false);
+  });
+  it('rejects mismatched confirmation password', () => {
+    const res = changePasswordSchema.safeParse({
+      currentPassword: 'OldPassword123',
+      newPassword: 'NewPassword123',
+      confirmPassword: 'DifferentPassword123',
+    });
+    expect(res.success).toBe(false);
+  });
+  it('accepts valid password change payload', () => {
+    const res = changePasswordSchema.safeParse({
+      currentPassword: 'OldPassword123',
+      newPassword: 'NewPassword123',
+      confirmPassword: 'NewPassword123',
+    });
+    expect(res.success).toBe(true);
   });
 });
 

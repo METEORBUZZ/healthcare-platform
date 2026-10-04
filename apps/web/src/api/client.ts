@@ -1,6 +1,12 @@
 import type {
+  AdminCreateUserInput,
   AdminDashboardDto,
+  AdminAnalyticsDto,
+  AdminAuditLogDto,
+  AdminSettingsDto,
   AppointmentDto,
+  ChangePasswordInput,
+  CreateStaffAccountInput,
   CreateAppointmentInput,
   CreateReviewInput,
   DoctorDetailDto,
@@ -13,6 +19,8 @@ import type {
   RegisterInput,
   SessionUser,
   SlotsDto,
+  ShiftAssignmentDto,
+  ShiftAssignmentInput,
   UserDto,
   UpdateMeInput,
   PatientTrackingDto,
@@ -55,7 +63,11 @@ async function fetchJson(path: string, options: RequestInit = {}): Promise<unkno
   }
 
   if (!res.ok) {
-    const error = json?.error as { code?: string; message?: string; details?: Record<string, string[]> } | undefined;
+    const error = json?.error as
+      { code?: string; message?: string; details?: Record<string, string[]> } | undefined;
+    if (error?.code === 'PASSWORD_CHANGE_REQUIRED') {
+      window.dispatchEvent(new CustomEvent('password-change-required'));
+    }
     throw new ApiError(
       res.status,
       error?.code ?? 'UNKNOWN_ERROR',
@@ -82,14 +94,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
  * For endpoints that return `{ data: T[], meta: { page, pageSize, total, totalPages } }`.
  * Returns the full Paginated<T> envelope so callers can access both `.data` and `.meta`.
  */
-async function requestList<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<Paginated<T>> {
+async function requestList<T>(path: string, options: RequestInit = {}): Promise<Paginated<T>> {
   const json = await fetchJson(path, options);
   // Normalise: if the server returned a plain array, wrap it
   if (Array.isArray(json)) {
-    return { data: json as T[], meta: { page: 1, pageSize: json.length, total: json.length, totalPages: 1 } };
+    return {
+      data: json as T[],
+      meta: { page: 1, pageSize: json.length, total: json.length, totalPages: 1 },
+    };
   }
   if (json && typeof json === 'object' && 'data' in json) {
     return json as Paginated<T>;
@@ -108,6 +120,19 @@ export const api = {
     request<SessionUser>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    }),
+
+  adminLogin: (credentials: { email: string; password: string }) =>
+    request<SessionUser>('/admin/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    }),
+
+  getAdminMe: () => request<SessionUser>('/admin/auth/me'),
+
+  adminLogout: () =>
+    request<void>('/admin/auth/logout', {
+      method: 'POST',
     }),
 
   register: (data: RegisterInput) =>
@@ -201,11 +226,82 @@ export const api = {
     return requestList<UserDto>(`/admin/users${qs ? `?${qs}` : ''}`);
   },
 
+  getAllAdminUsers: async () => {
+    const pageSize = 100;
+    const firstPage = await requestList<UserDto>(`/admin/users?page=1&pageSize=${pageSize}`);
+    if (firstPage.meta.totalPages <= 1) return firstPage.data;
+    const remainingPages = await Promise.all(
+      Array.from({ length: firstPage.meta.totalPages - 1 }, (_, index) =>
+        requestList<UserDto>(`/admin/users?page=${index + 2}&pageSize=${pageSize}`),
+      ),
+    );
+    return [firstPage, ...remainingPages].flatMap((page) => page.data);
+  },
+
+  updateAdminUserStatus: (id: number, status: 'ACTIVE' | 'INACTIVE') =>
+    request<UserDto>(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  getAdminAppointments: (params: { status?: string; page?: number; pageSize?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.set('status', params.status);
+    if (params.page) query.set('page', String(params.page));
+    if (params.pageSize) query.set('pageSize', String(params.pageSize));
+    const suffix = query.size ? `?${query}` : '';
+    return requestList<AppointmentDto>(`/admin/appointments${suffix}`);
+  },
+
+  getAdminAnalytics: () => request<AdminAnalyticsDto>('/admin/analytics'),
+
+  getAdminSettings: () => request<AdminSettingsDto>('/admin/settings'),
+
+  getAdminAuditLogs: (params: { page?: number; pageSize?: number; action?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', String(params.page));
+    if (params.pageSize) query.set('pageSize', String(params.pageSize));
+    if (params.action) query.set('action', params.action);
+    const suffix = query.size ? `?${query}` : '';
+    return requestList<AdminAuditLogDto>(`/admin/audit-logs${suffix}`);
+  },
+
   verifyDoctor: (doctorId: number, isVerified: boolean) =>
     request<DoctorDto>(`/admin/doctors/${doctorId}/verify`, {
       method: 'PATCH',
       body: JSON.stringify({ isVerified }),
     }),
+
+  getAdminShiftAssignments: () => request<ShiftAssignmentDto[]>('/admin/shift-assignments'),
+
+  saveShiftAssignment: (data: ShiftAssignmentInput) =>
+    request<ShiftAssignmentDto>('/admin/shift-assignments', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  createStaffAccount: (data: CreateStaffAccountInput) =>
+    request<{ user: UserDto; shiftAssignment: ShiftAssignmentDto; temporaryPassword?: string }>(
+      '/admin/staff-users',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    ),
+
+  createAdminUser: (data: AdminCreateUserInput) =>
+    request<{ user: UserDto; temporaryPassword?: string }>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (data: ChangePasswordInput) =>
+    request<SessionUser>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getMyShiftAssignment: () => request<ShiftAssignmentDto | null>('/shifts/me'),
 
   // ── Profile & Tracking ───────────────────────────────────────────────────
   updateMe: (data: UpdateMeInput) =>
@@ -219,15 +315,11 @@ export const api = {
       patientId ? `/patients/${patientId}/tracking` : '/patients/me/tracking',
     ),
 
-  getAllPatientTracking: () =>
-    request<PatientTrackingDto[]>('/patients/tracking/all'),
+  getAllPatientTracking: () => request<PatientTrackingDto[]>('/patients/tracking/all'),
 
   recordVitals: (data: VitalsInput, patientId?: number) =>
-    request<PatientVitalsDto>(
-      patientId ? `/patients/${patientId}/vitals` : '/patients/me/vitals',
-      {
-        method: 'POST',
-        body: JSON.stringify(data),
-      },
-    ),
+    request<PatientVitalsDto>(patientId ? `/patients/${patientId}/vitals` : '/patients/me/vitals', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };

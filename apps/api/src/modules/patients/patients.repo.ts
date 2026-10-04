@@ -3,9 +3,65 @@ import type {
   PatientProfileInput,
   PatientTrackingDto,
   PatientVitalsDto,
+  Role,
   VitalsInput,
 } from '@healthcare/shared';
 import type { Db } from '../../db/pool';
+
+export type ClinicalAuditAction =
+  | 'TRACKING_LIST_READ'
+  | 'PATIENT_TRACKING_READ'
+  | 'PATIENT_PROFILE_READ'
+  | 'PATIENT_PROFILE_UPDATE'
+  | 'PATIENT_VITALS_CREATE'
+  | 'APPOINTMENT_LIST_READ'
+  | 'APPOINTMENT_READ'
+  | 'APPOINTMENT_STATUS_UPDATE'
+  | 'APPOINTMENT_REVIEW_CREATE'
+  | 'APPOINTMENT_CREATE';
+
+export async function auditClinicalAccess(
+  db: Db,
+  entry: {
+    actorUserId: number;
+    actorRole: Role;
+    action: ClinicalAuditAction;
+    patientId?: number | null;
+    outcome: 'ALLOWED' | 'DENIED';
+  },
+): Promise<void> {
+  await db.query(
+    `INSERT INTO clinical_access_audit (actor_user_id, actor_role, action, patient_id, outcome)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [entry.actorUserId, entry.actorRole, entry.action, entry.patientId ?? null, entry.outcome],
+  );
+}
+
+export async function auditTrackingList(
+  db: Db,
+  entry: {
+    actorUserId: number;
+    actorRole: Role;
+    patientIds: number[];
+    action: 'TRACKING_LIST_READ' | 'APPOINTMENT_LIST_READ';
+  },
+): Promise<void> {
+  if (entry.patientIds.length === 0) {
+    await auditClinicalAccess(db, {
+      actorUserId: entry.actorUserId,
+      actorRole: entry.actorRole,
+      action: entry.action,
+      outcome: 'ALLOWED',
+    });
+    return;
+  }
+  await db.query(
+    `INSERT INTO clinical_access_audit (actor_user_id, actor_role, action, patient_id, outcome)
+     SELECT $1, $2, $4, patient_id, 'ALLOWED'
+       FROM unnest($3::integer[]) AS patient_id`,
+    [entry.actorUserId, entry.actorRole, entry.patientIds, entry.action],
+  );
+}
 
 interface Row {
   id: number;
@@ -244,20 +300,27 @@ export async function getTracking(db: Db, patientId: number): Promise<PatientTra
     },
   ];
 
-  const history = historyRows.length > 0
-    ? historyRows.map((h, idx) => ({
-        id: h.id,
-        date: typeof h.appointment_date === 'string' ? h.appointment_date : new Date(h.appointment_date).toISOString().slice(0, 10),
-        time: h.start_time,
-        doctorName: h.doctor_name,
-        department: h.department,
-        diagnosis: h.diagnosis,
-        severity: (h.severity === 'High' || h.severity === 'Medium' || h.severity === 'Low') ? h.severity : 'Low',
-        totalVisits: totalVisitsCount - idx,
-        status: h.status,
-        doctorNotes: h.doctor_notes,
-      }))
-    : sampleHistory;
+  const history =
+    historyRows.length > 0
+      ? historyRows.map((h, idx) => ({
+          id: h.id,
+          date:
+            typeof h.appointment_date === 'string'
+              ? h.appointment_date
+              : new Date(h.appointment_date).toISOString().slice(0, 10),
+          time: h.start_time,
+          doctorName: h.doctor_name,
+          department: h.department,
+          diagnosis: h.diagnosis,
+          severity:
+            h.severity === 'High' || h.severity === 'Medium' || h.severity === 'Low'
+              ? h.severity
+              : 'Low',
+          totalVisits: totalVisitsCount - idx,
+          status: h.status,
+          doctorNotes: h.doctor_notes,
+        }))
+      : sampleHistory;
 
   return {
     patient: {
@@ -297,6 +360,53 @@ export async function listAllTracking(db: Db): Promise<PatientTrackingDto[]> {
   for (const r of rows) {
     const t = await getTracking(db, r.id);
     if (t) results.push(t);
+  }
+  return results;
+}
+
+export async function isVerifiedDoctor(db: Db, userId: number): Promise<boolean> {
+  const { rows } = await db.query<{ verified: boolean }>(
+    'SELECT is_verified AS verified FROM doctors WHERE user_id = $1',
+    [userId],
+  );
+  return rows[0]?.verified === true;
+}
+
+export async function canDoctorAccessPatient(
+  db: Db,
+  userId: number,
+  patientId: number,
+): Promise<boolean> {
+  const { rows } = await db.query<{ allowed: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+         FROM doctors d
+         JOIN appointments a ON a.doctor_id = d.id
+        WHERE d.user_id = $1
+          AND d.is_verified = true
+          AND a.patient_id = $2
+          AND a.status IN ('PENDING', 'CONFIRMED', 'COMPLETED')
+     ) AS allowed`,
+    [userId, patientId],
+  );
+  return rows[0]?.allowed === true;
+}
+
+export async function listDoctorTracking(db: Db, userId: number): Promise<PatientTrackingDto[]> {
+  const { rows } = await db.query<{ id: number }>(
+    `SELECT DISTINCT a.patient_id AS id
+       FROM appointments a
+       JOIN doctors d ON d.id = a.doctor_id
+      WHERE d.user_id = $1
+        AND d.is_verified = true
+        AND a.status IN ('PENDING', 'CONFIRMED', 'COMPLETED')
+      ORDER BY a.patient_id`,
+    [userId],
+  );
+  const results: PatientTrackingDto[] = [];
+  for (const row of rows) {
+    const tracking = await getTracking(db, row.id);
+    if (tracking) results.push(tracking);
   }
   return results;
 }

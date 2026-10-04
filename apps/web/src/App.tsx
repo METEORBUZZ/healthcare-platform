@@ -11,6 +11,9 @@ import { NotificationsModal } from './components/NotificationsModal';
 import { ProfileModal } from './components/ProfileModal';
 import { DeviceNotificationBanner } from './components/DeviceNotificationBanner';
 import { NiramayaLogo } from './components/NiramayaLogo';
+import { AdminPortal } from './views/AdminPortal';
+import { ChangePasswordView } from './views/ChangePasswordView';
+import { ADMIN_APP_URL, isAdminOrigin } from './config/appUrls';
 import { MapPin, AlertTriangle } from 'lucide-react';
 
 // ─── Error Boundary ──────────────────────────────────────────────────────────
@@ -18,10 +21,7 @@ interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
 }
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  ErrorBoundaryState
-> {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -135,15 +135,96 @@ const MainApp: React.FC = () => {
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
-  // Reset view to dashboard when user changes
   useEffect(() => {
-    setCurrentView('dashboard');
-  }, [user?.role, user?.id]);
+    const handlePopState = () => {
+      if (window.location.pathname === '/change-password') {
+        setCurrentView('change-password');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    if (window.location.pathname === '/change-password') {
+      setCurrentView('change-password');
+    }
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Reset view to dashboard when user changes, or force change-password if required
+  useEffect(() => {
+    if (user?.mustChangePassword) {
+      if (window.location.pathname !== '/change-password') {
+        window.history.pushState(null, '', '/change-password');
+      }
+      setCurrentView('change-password');
+    } else {
+      if (currentView === 'change-password' && window.location.pathname !== '/change-password') {
+        setCurrentView('dashboard');
+      }
+    }
+  }, [user?.mustChangePassword, user?.role, user?.id]);
+
+  useEffect(() => {
+    if (user?.role === 'ADMIN' && !isAdminOrigin) {
+      window.location.replace(`${ADMIN_APP_URL}/login`);
+    }
+  }, [user?.role]);
+
+  const handleNavigate = (view: string) => {
+    if (user?.mustChangePassword) {
+      setCurrentView('change-password');
+      return;
+    }
+    if (view === 'change-password') {
+      window.history.pushState(null, '', '/change-password');
+    } else if (window.location.pathname === '/change-password') {
+      window.history.pushState(null, '', '/');
+    }
+    setCurrentView(view);
+  };
 
   // Render role-specific dashboard content
   const renderDashboardContent = () => {
     if (!user) {
+      if (currentView === 'change-password' || window.location.pathname === '/change-password') {
+        return (
+          <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+            <h2>Sign in required</h2>
+            <p>Please sign in with your credentials to change your password.</p>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              style={{
+                marginTop: '1rem',
+                padding: '0.65rem 1.25rem',
+                background: '#0284c7',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Sign In
+            </button>
+          </div>
+        );
+      }
       return <PrivateHospitalSecurityGate onSuccess={() => setCurrentView('dashboard')} />;
+    }
+
+    if (
+      user.mustChangePassword ||
+      currentView === 'change-password' ||
+      window.location.pathname === '/change-password'
+    ) {
+      return (
+        <ChangePasswordView
+          onPasswordChanged={() => {
+            setCurrentView('dashboard');
+            if (window.location.pathname === '/change-password') {
+              window.history.pushState(null, '', '/');
+            }
+          }}
+        />
+      );
     }
 
     if (currentView === 'tracking') {
@@ -182,12 +263,17 @@ const MainApp: React.FC = () => {
     return <DoctorDashboardView />;
   };
 
+  if (isAdminOrigin) return <AdminPortal />;
+  if (user?.role === 'ADMIN') {
+    return <main className="admin-loading">Opening the separate administrator console…</main>;
+  }
+
   return (
     <div className="app-container">
       <DeviceNotificationBanner onOpenPortalTab={() => setCurrentView('dashboard')} />
       <Navbar
         currentView={currentView}
-        onNavigate={setCurrentView}
+        onNavigate={handleNavigate}
         onOpenAuth={() => setShowAuthModal(true)}
         darkMode={darkMode}
         onToggleDarkMode={toggleDarkMode}
@@ -219,7 +305,10 @@ const MainApp: React.FC = () => {
             gap: '1.5rem',
           }}
         >
-          <div className="hospital-footer-brand" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div
+            className="hospital-footer-brand"
+            style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
+          >
             <NiramayaLogo size="sm" showSubtext={true} />
             <span
               className="hospital-footer-version"
@@ -299,7 +388,8 @@ const MainApp: React.FC = () => {
                 </span>
               </div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                01,301 Sai Enclave, Above Sai Furniture, Opposite Laxmi Petrol Pump, Sarigam Bhilad road, Sarigam, Umargam, Gujarat, India 396155
+                01,301 Sai Enclave, Above Sai Furniture, Opposite Laxmi Petrol Pump, Sarigam Bhilad
+                road, Sarigam, Umargam, Gujarat, India 396155
               </div>
             </div>
           </a>
@@ -307,19 +397,11 @@ const MainApp: React.FC = () => {
       </footer>
 
       {/* Modals */}
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-        />
-      )}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
 
-      {showNotifications && (
-        <NotificationsModal onClose={() => setShowNotifications(false)} />
-      )}
+      {showNotifications && <NotificationsModal onClose={() => setShowNotifications(false)} />}
 
-      {showProfileModal && (
-        <ProfileModal onClose={() => setShowProfileModal(false)} />
-      )}
+      {showProfileModal && <ProfileModal onClose={() => setShowProfileModal(false)} />}
     </div>
   );
 };

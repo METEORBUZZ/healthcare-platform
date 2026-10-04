@@ -10,7 +10,7 @@ import { env, isProd } from '../config/env';
 import { pool, withTransaction } from './pool';
 
 if (isProd) {
-  console.error('Refusing to seed a production database.');
+  console.error('Demo seeding is disabled in production. Create the initial administrator with the one-time db:create-admin command.');
   process.exit(1);
 }
 
@@ -33,6 +33,9 @@ const PATIENTS = [
 ];
 
 async function main() {
+  if (!env.SEED_PASSWORD) {
+    throw new Error('SEED_PASSWORD is required to seed demo data.');
+  }
   const reset = process.argv.includes('--reset');
   const { rows } = await pool.query<{ count: number }>('SELECT COUNT(*) AS count FROM users');
   if ((rows[0]?.count ?? 0) > 0) {

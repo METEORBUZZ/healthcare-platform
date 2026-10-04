@@ -43,6 +43,10 @@ const PRESET_AVATARS = [
   },
 ];
 
+const MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_PROFILE_AVATAR_DATA_URL_LENGTH = 72 * 1024;
+const MAX_PROFILE_AVATAR_DIMENSION = 512;
+
 export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, onSuccess }) => {
   const { user, refreshUser } = useAuth();
 
@@ -64,8 +68,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, onSuccess }
   const [hospitalAffiliation, setHospitalAffiliation] = useState('');
 
   const [saving, setSaving] = useState(false);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [customUrlInput, setCustomUrlInput] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -78,21 +82,63 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, onSuccess }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.currentTarget.value = '';
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file');
+      return;
+    }
+    if (file.size > MAX_PROFILE_PHOTO_BYTES) {
       setError('Please choose an image under 2MB');
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        setAvatarUrl(reader.result);
-        setError(null);
+
+    setProcessingPhoto(true);
+    setError(null);
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('We could not read this photo. Please choose a different image.'));
+        image.src = imageUrl;
+      });
+
+      const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+      if (!longestSide) {
+        throw new Error('We could not read this photo. Please choose a different image.');
       }
-    };
-    reader.readAsDataURL(file);
+      let scale = Math.min(1, MAX_PROFILE_AVATAR_DIMENSION / longestSide);
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Your browser could not prepare this photo. Please try another image.');
+      }
+
+      let avatarDataUrl = '';
+      for (let attempt = 0; attempt < 9; attempt += 1) {
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        avatarDataUrl = canvas.toDataURL('image/jpeg', [0.84, 0.72, 0.6][attempt % 3]);
+        if (avatarDataUrl.length <= MAX_PROFILE_AVATAR_DATA_URL_LENGTH) break;
+        if (attempt % 3 === 2) scale *= 0.8;
+      }
+
+      if (avatarDataUrl.length > MAX_PROFILE_AVATAR_DATA_URL_LENGTH) {
+        throw new Error('This photo could not be resized enough. Please choose a different image.');
+      }
+      setAvatarUrl(avatarDataUrl);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'We could not prepare this photo. Please try again.');
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+      setProcessingPhoto(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -156,6 +202,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, onSuccess }
       >
         {/* Header */}
         <div
+          aria-busy={processingPhoto}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -254,8 +301,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, onSuccess }
               </div>
               <label
                 htmlFor="avatar-upload"
-                title="Upload Photo"
-                aria-label="Upload photo"
+                title="Choose a profile photo"
+                aria-label="Choose a profile photo"
                 style={{
                   position: 'absolute',
                   bottom: '0px',
@@ -273,20 +320,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, onSuccess }
                 }}
               >
                 <Camera size={14} />
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
               </label>
             </div>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              aria-label="Choose a profile photo from your device"
+              style={{ display: 'none' }}
+            />
 
             {/* Quick Preset Selector */}
             <div style={{ textAlign: 'center', width: '100%' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                Select a Profile Picture or Upload Custom Photo
+                Choose a preset or upload a photo from your gallery
               </div>
               <div
                 style={{
@@ -325,36 +373,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, onSuccess }
                 ))}
               </div>
 
-              <div style={{ marginTop: '0.65rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setCustomUrlInput((prev) => !prev)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--primary)',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {customUrlInput ? 'Hide URL input' : 'Enter image URL manually'}
-                </button>
-              </div>
+              <label className="btn btn-secondary btn-sm profile-gallery-button" htmlFor="avatar-upload">
+                <Camera size={15} />
+                {processingPhoto ? 'Preparing photo…' : avatarUrl ? 'Choose a different photo' : 'Choose from gallery'}
+              </label>
+              <div className="profile-gallery-hint">JPG, PNG, or WebP · Up to 2 MB</div>
 
-              {customUrlInput && (
-                <div style={{ marginTop: '0.5rem' }}>
-                  <input
-                    type="url"
-                    className="form-input"
-                    placeholder="https://example.com/photo.jpg"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
-                    aria-label="Custom image URL"
-                  />
-                </div>
-              )}
             </div>
           </div>
 

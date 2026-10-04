@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { SessionUser, PublicMeta, RegisterInput, Role } from '@healthcare/shared';
 import { api } from '../api/client';
 import { shiftRosterService } from '../utils/shiftRosterService';
+import { isAdminOrigin } from '../config/appUrls';
 
 interface AuthContextType {
   user: SessionUser | null;
@@ -9,7 +10,13 @@ interface AuthContextType {
   loading: boolean;
   unreadNotifications: number;
   login: (credentials: { email: string; password: string }) => Promise<void>;
+  loginAdmin: (credentials: { email: string; password: string }) => Promise<void>;
   register: (data: RegisterInput) => Promise<void>;
+  changePassword: (credentials: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   quickLogin: (role: Role) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -26,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = useCallback(async () => {
     try {
-      const me = await api.getMe();
+      const me = isAdminOrigin ? await api.getAdminMe() : await api.getMe();
       setUser(me);
     } catch {
       setUser(null);
@@ -78,7 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Dr. Alok Verma (Hospital Medical Superintendent)',
       email: 'admin@demo.test',
       role: 'ADMIN',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
       doctorId: null,
       patientId: null,
       isVerified: true,
@@ -88,7 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Dr. Priya Sharma',
       email: 'doctor@demo.test',
       role: 'DOCTOR',
-      avatarUrl: 'https://images.unsplash.com/photo-1594824813589-3286ff00eeae?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1594824813589-3286ff00eeae?auto=format&fit=crop&q=80&w=400',
       doctorId: 1,
       patientId: null,
       isVerified: true,
@@ -98,7 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Sister Anjali Nair',
       email: 'nurse@demo.test',
       role: 'NURSE',
-      avatarUrl: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=400',
       doctorId: null,
       patientId: null,
       isVerified: true,
@@ -108,7 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Kavita Sundaram',
       email: 'receptionist@demo.test',
       role: 'RECEPTIONIST',
-      avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
       doctorId: null,
       patientId: null,
       isVerified: true,
@@ -118,7 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Pooja Sundaram',
       email: 'pharmacist@demo.test',
       role: 'PHARMACIST',
-      avatarUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=400',
       doctorId: null,
       patientId: null,
       isVerified: true,
@@ -128,7 +140,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Vikramaditya Rathore',
       email: 'lab@demo.test',
       role: 'LABORATORY_STAFF',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
       doctorId: null,
       patientId: null,
       isVerified: true,
@@ -138,7 +151,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Sister Anjali Nair',
       email: 'nurse@demo.test',
       role: 'STAFF',
-      avatarUrl: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=400',
       doctorId: null,
       patientId: null,
       isVerified: true,
@@ -148,7 +162,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: 'Ramesh Verma',
       email: 'patient@demo.test',
       role: 'PATIENT',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
       doctorId: null,
       patientId: 1,
       isVerified: true,
@@ -165,10 +180,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (credentials.password === 'Demo@12345') {
         if (lower === 'doctor@demo.test' || lower.includes('priya')) {
           setUser(DEMO_USERS.DOCTOR ?? null);
-          return;
-        }
-        if (lower === 'admin@demo.test' || lower.includes('admin')) {
-          setUser(DEMO_USERS.ADMIN ?? null);
           return;
         }
         if (lower === 'nurse@demo.test' || lower.includes('anjali')) {
@@ -192,6 +203,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
       }
+      throw err;
+    }
+  };
+
+  const loginAdmin = async (credentials: { email: string; password: string }) => {
+    try {
+      const session = await api.adminLogin(credentials);
+      if (session.role !== 'ADMIN') throw new Error('Administrator access is not permitted.');
+      setUser(session);
+    } catch (err) {
+      setUser(null);
       throw err;
     }
   };
@@ -220,9 +242,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const changePassword = async (credentials: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword?: string;
+  }) => {
+    const updated = await api.changePassword(credentials);
+    setUser(updated);
+  };
+
+  useEffect(() => {
+    const handler = () => {
+      setUser((current) => (current ? { ...current, mustChangePassword: true } : current));
+    };
+    window.addEventListener('password-change-required', handler);
+    return () => window.removeEventListener('password-change-required', handler);
+  }, []);
+
   const logout = async () => {
     try {
-      await api.logout();
+      if (isAdminOrigin && user?.role === 'ADMIN') await api.adminLogout();
+      else await api.logout();
     } catch {
       // ignore logout network errors
     } finally {
@@ -232,6 +272,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const quickLogin = async (role: Role) => {
+    if (role === 'ADMIN') {
+      throw new Error('Use the dedicated administrator sign-in page.');
+    }
     const creds: Record<Role, { email: string; password: string }> = {
       ADMIN: { email: 'admin@demo.test', password: 'Demo@12345' },
       DOCTOR: { email: 'doctor@demo.test', password: 'Demo@12345' },
@@ -259,7 +302,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         unreadNotifications,
         login,
+        loginAdmin,
         register,
+        changePassword,
         logout,
         quickLogin,
         refreshUser,
