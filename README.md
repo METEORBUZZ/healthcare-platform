@@ -107,22 +107,19 @@ copy .env.example .env
 Copy-Item .env.example .env
 ```
 
-Aapki `.env` file aisi dikhegi:
-```env
-# Database Connection URL (Optional: Agar PostgreSQL na ho toh app automatically in-memory database me chalti hai)
-DATABASE_URL="postgresql://postgres:password@localhost:5432/healthcare_db"
+The API requires PostgreSQL; it does not fall back to an in-memory database. Set `DATABASE_URL` to your local PostgreSQL database and set `JWT_ACCESS_SECRET` to a unique value generated with:
 
-# JWT Secret Key
-JWT_SECRET="healthcare_super_secure_jwt_secret_key_2025"
-
-# Server Port (Default: 3000)
-PORT=3000
-
-# Base URL
-APP_URL="http://localhost:3000"
+```bash
+openssl rand -base64 48
 ```
 
-> 💡 **Note**: Agar aapke paas abhi PostgreSQL installed nahi hai, tab bhi koi dikkat nahi hai! Project me pre-loaded mock database engine hai jo automatically initialize ho jata hai.
+For Docker Compose, generate `POSTGRES_PASSWORD` as well:
+
+```bash
+openssl rand -hex 32
+```
+
+Put each generated value into the matching `.env` variable. Keep local secrets separate from production secrets.
 
 ---
 
@@ -157,9 +154,11 @@ Login page par aap **One-Click Demo Login** buttons se directly login kar sakte 
 
 | Role | Email | Password | Access Area |
 | :--- | :--- | :--- | :--- |
-| **Patient** | `patient@demo.com` | `demo123` | Patient Portal & Booking Wizard |
-| **Doctor** | `doctor@demo.com` | `demo123` | Doctor Schedule & Consultations |
-| **Admin** | `admin@demo.com` | `demo123` | Admin Analytics & User Ledger |
+| **Patient** | `patient@demo.test` | Local `SEED_PASSWORD` | Patient Portal & Booking Wizard |
+| **Doctor** | `doctor@demo.test` | Local `SEED_PASSWORD` | Doctor Schedule & Consultations |
+| **Admin** | `admin@demo.test` *(seeded local demo only)* | `Demo@12345` *(only when `SEED_PASSWORD=Demo@12345`)* | Dedicated Admin Application |
+
+Create an administrator with your chosen credentials using the one-time bootstrap tool if you do not use the local demo seed. Never use seeded/demo credentials in production.
 
 ---
 
@@ -172,6 +171,7 @@ Agar aapko complete system (App + PostgreSQL Database) bina kisi manual dependen
 Is project me `Dockerfile` aur `docker-compose.yml` pre-configured hain.
 
 ```bash
+# Copy .env.example to .env and set unique JWT_ACCESS_SECRET and POSTGRES_PASSWORD values.
 # 1. Docker containers build and start karein
 docker compose up --build
 ```
@@ -181,9 +181,7 @@ Background / Detached mode me chalane ke liye:
 docker compose up -d --build
 ```
 
-Isse 2 containers chalenge:
-1. `healthcare_postgres`: PostgreSQL 16 Alpine database with persistent volume (`pgdata`) aur auto-imported `schema.sql` + `seed.sql`.
-2. `healthcare_app`: Production Node.js 20 container listening on port `3000`.
+Isse PostgreSQL aur application containers chalenge. Database migrations run automatically; demo data is not seeded. Compose requires non-empty `JWT_ACCESS_SECRET` and `POSTGRES_PASSWORD` values in `.env`.
 
 **App URL**: [http://localhost:3000](http://localhost:3000)
 
@@ -211,9 +209,12 @@ docker build -t healthcare-platform:latest .
 # 2. Container run karein
 docker run -p 3000:3000 \
   -e PORT=3000 \
-  -e JWT_SECRET=my_secret_key_123 \
+  -e DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/healthcare" \
+  -e JWT_ACCESS_SECRET="$(openssl rand -base64 48)" \
   --name healthcare-app healthcare-platform:latest
 ```
+
+The container requires a reachable PostgreSQL database; configure `HOST`, `USER`, and `PASSWORD` for your environment.
 
 ---
 
@@ -364,14 +365,18 @@ jobs:
 
 ## ⚙️ Environment Variables (.env)
 
-| Variable | Description | Default | Required |
+| Variable | Description | Local default | Required |
 | :--- | :--- | :--- | :--- |
-| `PORT` | Web server port | `3000` | Optional |
-| `NODE_ENV` | Environment (`development` / `production`) | `development` | Optional |
-| `JWT_SECRET` | Secret key for signing & verifying JWT tokens | `healthcare_super_secure_...` | Recommended |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://...` | Optional (Auto-fallback to in-memory) |
-| `GEMINI_API_KEY` | Google Gemini AI API key (Server-side) | `""` | Optional |
-| `APP_URL` | Application canonical base URL | `http://localhost:3000` | Optional |
+| `NODE_ENV` | Environment (`development` / `test` / `production`) | `development` | No |
+| `PORT` | API and web server port | `4000` locally / `3000` in Docker | No |
+| `DATABASE_URL` | PostgreSQL connection string | Local PostgreSQL URL | Yes |
+| `DATABASE_SSL` | PostgreSQL TLS mode | `disable` locally | Production database setting |
+| `JWT_ACCESS_SECRET` | Secret key for signing access tokens | Generate a unique local value | Yes; 64+ high-entropy characters in production |
+| `POSTGRES_PASSWORD` | PostgreSQL password for Docker Compose | None | Yes for Docker Compose |
+| `CORS_ORIGINS` | Additional trusted browser origins | Empty | No |
+| `COOKIE_SECURE` | Require HTTPS for authentication cookies | `false` | Must be `true` in production |
+| `CLINIC_TIMEZONE` | Time zone used for clinic scheduling | `Asia/Kolkata` | No |
+| `SEED_PASSWORD` | Password for local demo seed accounts | Unset | Only when running the demo seed |
 
 ---
 
@@ -397,12 +402,12 @@ jobs:
 
 #### Q2: Login error "Invalid credentials"
 **Solution**: Demo login credentials verify karein:
-- Email: `patient@demo.com`
-- Password: `demo123`
+- Email: `patient@demo.test`
+- Password: The value configured as `SEED_PASSWORD` before running `npm run db:seed`.
 *(Make sure caps lock off hai)*
 
 #### Q3: Database connection warning in terminal
-Agar terminal me `Could not connect to PostgreSQL DATABASE_URL, using integrated robust relational engine` dikhe, toh ghabraye nahi! App bina PostgreSQL ke bhi smoothly chalegi using built-in memory store.
+The API requires a reachable PostgreSQL database. Confirm that PostgreSQL is running and that `DATABASE_URL` points to the correct database.
 
 ---
 
