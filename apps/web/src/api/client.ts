@@ -26,6 +26,20 @@ import type {
   PatientTrackingDto,
   PatientVitalsDto,
   VitalsInput,
+  DiagnosticReportDto,
+  MedicalRecordDto,
+  PrescriptionDto,
+  TaskDto,
+  DepartmentDto,
+  PatientAssignmentDto,
+  AuditLogDto,
+  CreateMedicalRecordInput,
+  CreatePrescriptionInput,
+  CreateTaskInput,
+  BlockchainVerificationResult,
+  BlockchainBlockDto,
+  BlockchainTransactionDto,
+  BlockchainChainStatusDto,
 } from '@healthcare/shared';
 
 const BASE_URL = '/api/v1';
@@ -321,5 +335,111 @@ export const api = {
     request<PatientVitalsDto>(patientId ? `/patients/${patientId}/vitals` : '/patients/me/vitals', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  // ── Diagnostic Reports (Rule 1 & FR-11) ──────────────────────────────────
+  getReports: (params?: { patientId?: number; category?: string; status?: string; q?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.patientId) sp.set('patientId', String(params.patientId));
+    if (params?.category) sp.set('category', params.category);
+    if (params?.status) sp.set('status', params.status);
+    if (params?.q) sp.set('q', params.q);
+    const qs = sp.toString();
+    return request<DiagnosticReportDto[]>(`/reports${qs ? `?${qs}` : ''}`);
+  },
+
+  getReportById: (id: string) => request<DiagnosticReportDto>(`/reports/${id}`),
+
+  // ── Clinical Medical Records (Rule 2 & FR-09) ────────────────────────────
+  getMedicalRecords: (patientId: number) =>
+    request<MedicalRecordDto[]>(`/patients/${patientId}/medical-records`),
+
+  createMedicalRecord: (patientId: number, data: Omit<CreateMedicalRecordInput, 'patientId'>) =>
+    request<MedicalRecordDto>(`/patients/${patientId}/medical-records`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // ── Prescriptions ────────────────────────────────────────────────────────
+  getPrescriptions: (patientId?: number) =>
+    request<PrescriptionDto[]>(patientId ? `/patients/${patientId}/prescriptions` : '/prescriptions'),
+
+  createPrescription: (patientId: number, data: Omit<CreatePrescriptionInput, 'patientId'>) =>
+    request<PrescriptionDto>(`/patients/${patientId}/prescriptions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updatePrescriptionStatus: (id: number, status: string) =>
+    request<PrescriptionDto>(`/prescriptions/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  // ── Tasks Board (FR-07 & FR-08) ──────────────────────────────────────────
+  getMyTasks: () => request<TaskDto[]>('/tasks/my'),
+
+  getTasks: (params?: { status?: string; ward?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.status) sp.set('status', params.status);
+    if (params?.ward) sp.set('ward', params.ward);
+    const qs = sp.toString();
+    return request<TaskDto[]>(`/tasks${qs ? `?${qs}` : ''}`);
+  },
+
+  createTask: (data: CreateTaskInput) =>
+    request<TaskDto>('/tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateTaskStatus: (id: number, status: string) =>
+    request<TaskDto>(`/tasks/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  // ── Departments ──────────────────────────────────────────────────────────
+  getDepartments: () => request<DepartmentDto[]>('/departments'),
+
+  // ── Patient Assignments ──────────────────────────────────────────────────
+  getAssignments: () => request<PatientAssignmentDto[]>('/assignments'),
+
+  assignPatient: (doctorId: number, patientId: number, notes?: string) =>
+    request<PatientAssignmentDto>('/assignments', {
+      method: 'POST',
+      body: JSON.stringify({ doctorId, patientId, notes }),
+    }),
+
+  // ── Blockchain Integrity & Tamper Detection ──────────────────────────────
+  verifyReportBlockchain: (reportId: string) =>
+    request<BlockchainVerificationResult>(`/blockchain/reports/${reportId}/verify`),
+
+  anchorReportBlockchain: (reportId: string) =>
+    request<{ txId: string; blockIndex: number; blockHash: string; timestamp: string }>(
+      `/blockchain/reports/${reportId}/anchor`,
+      { method: 'POST' },
+    ),
+
+  verifyMedicalRecordBlockchain: (recordId: number) =>
+    request<BlockchainVerificationResult>(`/blockchain/medical-records/${recordId}/verify`),
+
+  getBlockchainChainStatus: () =>
+    request<BlockchainChainStatusDto>('/blockchain/chain-status'),
+
+  getBlockchainBlocks: (limit = 20, offset = 0) =>
+    request<BlockchainBlockDto[]>(`/blockchain/blocks?limit=${limit}&offset=${offset}`),
+
+  getBlockchainTransactions: (limit = 30, offset = 0) =>
+    request<BlockchainTransactionDto[]>(`/blockchain/transactions?limit=${limit}&offset=${offset}`),
+
+  simulateReportTamper: (reportId: string) =>
+    request<{ message: string }>(`/blockchain/reports/${reportId}/simulate-tamper`, {
+      method: 'POST',
+    }),
+
+  restoreReportFromTamper: (reportId: string) =>
+    request<{ message: string }>(`/blockchain/reports/${reportId}/restore`, {
+      method: 'POST',
     }),
 };

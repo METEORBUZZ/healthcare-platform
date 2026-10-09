@@ -17,7 +17,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   onSuccess,
   onOpenAuth,
 }) => {
-  const { user, meta, quickLogin } = useAuth();
+  const { user, meta } = useAuth();
 
   // Today's date in YYYY-MM-DD
   const todayStr = meta?.today || new Date().toISOString().split('T')[0]!;
@@ -212,15 +212,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <AlertCircle size={16} color="var(--primary)" />
-                    <span>Please log in as a patient to complete booking.</span>
+                    <span>Please sign in to your patient account to complete booking.</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => quickLogin('PATIENT')}
-                    className="btn btn-primary btn-sm"
-                  >
-                    <UserCheck size={14} /> Quick Demo Login
-                  </button>
+                  {onOpenAuth && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenAuth()}
+                      className="btn btn-primary btn-sm"
+                    >
+                      Sign In
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -233,20 +235,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     borderRadius: 'var(--radius-sm)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
                     gap: '0.5rem',
                     fontSize: '0.85rem',
                   }}
                 >
-                  <span>You are signed in as {user.role}. Switch to Patient?</span>
-                  <button
-                    type="button"
-                    onClick={() => quickLogin('PATIENT')}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Switch to Demo Patient
-                  </button>
+                  <AlertCircle size={16} />
+                  <span>You are signed in as {user.role}. Booking appointments is reserved for patients.</span>
                 </div>
               )}
 

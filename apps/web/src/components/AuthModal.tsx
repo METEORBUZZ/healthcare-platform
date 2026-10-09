@@ -27,7 +27,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'DOCTOR' }) => {
-  const { login, quickLogin } = useAuth();
+  const { login } = useAuth();
 
   // Public portal sign-in is limited to clinical roles; administrators use the configured admin origin.
   const [activeTab, setActiveTab] = useState<'DOCTOR' | 'STAFF'>(() => {
@@ -116,60 +116,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'DO
       setLoading(false);
     }
   };
-
-  const handleQuickAccess = async (role: Role) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await quickLogin(role);
-      onClose();
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Demo login failed. Please try manual sign in.';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const staffStations = [
-    {
-      role: 'NURSE' as Role,
-      title: 'Nurse',
-      name: 'Sister Anjali',
-      email: 'nurse@demo.test',
-      icon: <HeartPulse size={16} />,
-      color: '#059669',
-      bg: 'rgba(5, 150, 105, 0.08)',
-    },
-    {
-      role: 'RECEPTIONIST' as Role,
-      title: 'Reception',
-      name: 'Kavita S.',
-      email: 'receptionist@demo.test',
-      icon: <ClipboardList size={16} />,
-      color: '#d97706',
-      bg: 'rgba(217, 119, 6, 0.08)',
-    },
-    {
-      role: 'PHARMACIST' as Role,
-      title: 'Pharmacist',
-      name: 'Pooja S.',
-      email: 'pharmacist@demo.test',
-      icon: <Pill size={16} />,
-      color: '#2563eb',
-      bg: 'rgba(37, 99, 235, 0.08)',
-    },
-    {
-      role: 'LABORATORY_STAFF' as Role,
-      title: 'Lab Staff',
-      name: 'Vikramaditya',
-      email: 'lab@demo.test',
-      icon: <Microscope size={16} />,
-      color: '#db2777',
-      bg: 'rgba(219, 39, 119, 0.08)',
-    },
-  ];
 
   return (
     <div
@@ -369,125 +315,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialRole = 'DO
               </div>
             </div>
           )}
-
-          {/* Quick-Access 1-Click Buttons for the Active Portal */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '0.5rem',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                <Sparkles size={13} color="#0284c7" />
-                1-Click Fast Access ({activeTab})
-              </span>
-            </div>
-
-            {/* DOCTOR 1-Click */}
-            {activeTab === 'DOCTOR' && (
-              <button
-                type="button"
-                onClick={() => handleQuickAccess('DOCTOR')}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(2, 132, 199, 0.3)',
-                  background: 'rgba(2, 132, 199, 0.08)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Stethoscope size={18} color="#0284c7" />
-                  <div style={{ textAlign: 'left' }}>
-                    <div
-                      style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}
-                    >
-                      Dr. Priya Sharma (Cardiologist)
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      doctor@demo.test
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="#0284c7" />
-              </button>
-            )}
-
-            {/* STAFF 1-Click Stations */}
-            {activeTab === 'STAFF' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                {staffStations.map((st) => (
-                  <button
-                    key={st.role}
-                    type="button"
-                    onClick={() => handleQuickAccess(st.role)}
-                    disabled={loading}
-                    style={{
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: '10px',
-                      border: '1px solid var(--border)',
-                      background: st.bg,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <div style={{ color: st.color }}>{st.icon}</div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: '0.78rem',
-                          fontWeight: 800,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {st.title}
-                      </div>
-                      <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
-                        {st.name}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                margin: '1rem 0 0.75rem 0',
-                gap: '0.75rem',
-              }}
-            >
-              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>
-                OR SIGN IN WITH CREDENTIALS
-              </span>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-            </div>
-          </div>
 
           {/* Form */}
           <form

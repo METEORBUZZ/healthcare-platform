@@ -422,3 +422,154 @@ export interface HospitalOverviewDto {
   patientCount: number;
   pendingTasks: number;
 }
+
+export interface DepartmentDto {
+  id: number;
+  name: string;
+  code: string;
+  description: string | null;
+  headDoctorId: number | null;
+  headDoctorName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientAssignmentDto {
+  id: number;
+  doctorId: number;
+  doctorName?: string;
+  patientId: number;
+  patientName?: string;
+  assignedBy: number | null;
+  isActive: boolean;
+  notes: string | null;
+  assignedAt: string;
+}
+
+export interface TaskDto {
+  id: number;
+  title: string;
+  description: string | null;
+  assignedToUserId: number | null;
+  assignedToName?: string;
+  ward: string | null;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL';
+  patientId: number | null;
+  patientName?: string;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MedicalRecordDto {
+  id: number;
+  patientId: number;
+  patientName?: string;
+  doctorId: number;
+  doctorName?: string;
+  recordType: string;
+  chiefComplaint: string | null;
+  diagnosis: string | null;
+  soapNotes: string;
+  treatmentPlan: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrescriptionDto {
+  id: number;
+  patientId: number;
+  patientName?: string;
+  doctorId: number;
+  doctorName?: string;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions: string | null;
+  status: 'ACTIVE' | 'DISCONTINUED' | 'COMPLETED';
+  createdAt: string;
+}
+
+export interface DiagnosticReportDto {
+  id: string; // UUID
+  patientId: number;
+  patientName?: string;
+  prescribingDoctorId: number | null;
+  prescribingDoctorName?: string;
+  uploadedByUserId: number | null;
+  testName: string;
+  category: string;
+  reportDate: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  status: 'PENDING' | 'COMPLETED' | 'VERIFIED';
+  summary: string | null;
+  downloadUrl?: string;
+  blockchainTxId?: string | null;
+  blockchainHash?: string | null;
+  blockchainStatus?: 'VERIFIED' | 'TAMPER_DETECTED' | 'PENDING';
+  blockchainAnchoredAt?: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogDto {
+  id: number;
+  actorUserId: number | null;
+  actorName?: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  outcome: 'SUCCESS' | 'FAILURE' | 'DENIED';
+  ipAddress?: string | null;
+  createdAt: string;
+}
+
+export type BlockchainIntegrityStatus = 'VERIFIED' | 'TAMPER_DETECTED' | 'UNANCHORED' | 'PENDING';
+
+export interface BlockchainVerificationResult {
+  status: BlockchainIntegrityStatus;
+  recordId: string;
+  recordType: 'REPORT' | 'MEDICAL_RECORD';
+  matches: boolean;
+  originalHash: string | null;
+  currentHash: string;
+  blockIndex?: number;
+  txId?: string;
+  anchoredAt?: string;
+  verifiedAt: string;
+  details: string;
+}
+
+export interface BlockchainTransactionDto {
+  txId: string;
+  blockIndex: number;
+  recordId: string;
+  recordType: 'REPORT' | 'MEDICAL_RECORD';
+  sha256Hash: string;
+  eventType: string;
+  actorRef?: string;
+  timestamp: string;
+}
+
+export interface BlockchainBlockDto {
+  blockIndex: number;
+  blockHash: string;
+  previousHash: string;
+  merkleRoot: string;
+  nonce: number;
+  transactionCount: number;
+  timestamp: string;
+  transactions?: BlockchainTransactionDto[];
+}
+
+export interface BlockchainChainStatusDto {
+  valid: boolean;
+  totalBlocks: number;
+  totalTransactions: number;
+  latestBlockHash: string;
+  issues: string[];
+}
+

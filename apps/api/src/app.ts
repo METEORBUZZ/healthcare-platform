@@ -25,6 +25,15 @@ import { doctorRoutes } from './modules/doctors/doctors.routes';
 import { notificationRoutes } from './modules/notifications/notifications.routes';
 import { patientRoutes } from './modules/patients/patients.routes';
 import { shiftRoutes } from './modules/shifts/shifts.routes';
+import { departmentRoutes } from './modules/departments/departments.routes';
+import { staffRoutes } from './modules/staff/staff.routes';
+import { assignmentRoutes } from './modules/assignments/assignments.routes';
+import { taskRoutes } from './modules/tasks/tasks.routes';
+import { medicalRecordRoutes } from './modules/medical-records/medical-records.routes';
+import { prescriptionRoutes } from './modules/prescriptions/prescriptions.routes';
+import { reportRoutes } from './modules/reports/reports.routes';
+import { auditLogRoutes } from './modules/audit-logs/audit-logs.routes';
+import { blockchainRoutes } from './modules/blockchain/blockchain.routes';
 
 export function createApp() {
   const app = express();
@@ -104,15 +113,20 @@ export function createApp() {
   v1.use('/notifications', notificationRoutes);
   v1.use('/dashboard', dashboardRoutes);
   v1.use('/shifts', shiftRoutes);
+  v1.use('/departments', departmentRoutes);
+  v1.use('/staff', staffRoutes);
+  v1.use('/assignments', assignmentRoutes);
+  v1.use('/tasks', taskRoutes);
+  v1.use('/prescriptions', prescriptionRoutes);
+  v1.use('/reports', reportRoutes);
+  v1.use('/audit-logs', auditLogRoutes);
+  v1.use('/blockchain', blockchainRoutes);
+  v1.use('/', medicalRecordRoutes);
   v1.use('/admin/auth', adminAuthRoutes);
   v1.use('/admin', adminRoutes);
 
   v1.get('/profile', authenticate, (req, res) => {
     res.json({ data: { message: 'Profile accessed successfully', userId: req.auth?.userId } });
-  });
-
-  v1.get('/prescriptions', authenticate, (_req, res) => {
-    res.json({ data: [] });
   });
 
   app.use('/api/v1', v1);

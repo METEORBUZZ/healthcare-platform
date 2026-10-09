@@ -439,7 +439,7 @@ export const StaffDashboardView: React.FC = () => {
           </span>
         </div>
 
-        {shiftSyncError && (
+        {shiftSyncError && !shiftSyncError.toLowerCase().includes('sign in') && (
           <div role="alert" style={{ marginBottom: '1rem', color: '#b91c1c', fontSize: '0.85rem' }}>
             Shift updates could not be synchronized: {shiftSyncError}{' '}
             <button

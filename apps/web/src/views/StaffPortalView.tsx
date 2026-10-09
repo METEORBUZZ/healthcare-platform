@@ -47,7 +47,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
   onOpenAuth,
   defaultTab = 'CONSULTATIONS',
 }) => {
-  const { user, quickLogin } = useAuth();
+  const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const _isDoctor = user?.role === 'DOCTOR';
 
@@ -635,7 +635,7 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 cursor: 'pointer',
               }}
-              onClick={() => (onOpenAuth ? onOpenAuth('DOCTOR') : quickLogin('DOCTOR'))}
+              onClick={() => onOpenAuth?.('DOCTOR')}
             >
               <div
                 style={{

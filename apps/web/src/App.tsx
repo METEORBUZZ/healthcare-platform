@@ -13,6 +13,16 @@ import { DeviceNotificationBanner } from './components/DeviceNotificationBanner'
 import { NiramayaLogo } from './components/NiramayaLogo';
 import { AdminPortal } from './views/AdminPortal';
 import { ChangePasswordView } from './views/ChangePasswordView';
+import { PatientReportsPortalView } from './views/PatientReportsPortalView';
+import { BlockchainLedgerExplorerView } from './views/BlockchainLedgerExplorerView';
+import { HospitalSidebar } from './components/HospitalSidebar';
+import { UserProfileSectionView } from './views/UserProfileSectionView';
+import { StaffScheduleView } from './views/StaffScheduleView';
+import { CalendarAppointmentsView } from './views/CalendarAppointmentsView';
+import { HospitalDepartmentsView } from './views/HospitalDepartmentsView';
+import { HospitalStockView } from './views/HospitalStockView';
+import { HelpCenterView } from './views/HelpCenterView';
+import { DoctorDirectoryView } from './views/DoctorDirectoryView';
 import { ADMIN_APP_URL, isAdminOrigin } from './config/appUrls';
 import { MapPin, AlertTriangle } from 'lucide-react';
 
@@ -227,7 +237,24 @@ const MainApp: React.FC = () => {
       );
     }
 
-    if (currentView === 'tracking') {
+    if (currentView === 'profile') {
+      return (
+        <UserProfileSectionView
+          onEditProfile={() => setShowProfileModal(true)}
+          onChangePassword={() => handleNavigate('change-password')}
+        />
+      );
+    }
+
+    if (currentView === 'staff-schedule') {
+      return <StaffScheduleView />;
+    }
+
+    if (currentView === 'calendar') {
+      return <CalendarAppointmentsView />;
+    }
+
+    if (currentView === 'patients' || currentView === 'tracking') {
       return (
         <PatientTrackingView
           initialPatientId={selectedTrackingPatientId}
@@ -238,6 +265,41 @@ const MainApp: React.FC = () => {
           }}
         />
       );
+    }
+
+    if (currentView === 'doctors') {
+      return (
+        <DoctorDirectoryView
+          onBookDoctor={() => handleNavigate('dashboard')}
+          onOpenAuth={() => setShowAuthModal(true)}
+        />
+      );
+    }
+
+    if (currentView === 'departments') {
+      return <HospitalDepartmentsView />;
+    }
+
+    if (currentView === 'stock') {
+      return <HospitalStockView />;
+    }
+
+    if (currentView === 'help-center') {
+      return <HelpCenterView />;
+    }
+
+    if (currentView === 'settings') {
+      return (
+        <ChangePasswordView
+          onPasswordChanged={() => {
+            setCurrentView('dashboard');
+          }}
+        />
+      );
+    }
+
+    if (currentView === 'blockchain') {
+      return <BlockchainLedgerExplorerView />;
     }
 
     // Role-based routing
@@ -257,6 +319,10 @@ const MainApp: React.FC = () => {
       user.role === 'STAFF'
     ) {
       return <StaffDashboardView />;
+    }
+
+    if (user.role === 'PATIENT') {
+      return <PatientReportsPortalView />;
     }
 
     // Default fallback to Doctor view
@@ -281,7 +347,37 @@ const MainApp: React.FC = () => {
         onOpenProfile={() => setShowProfileModal(true)}
       />
 
-      <main className="main-content">{renderDashboardContent()}</main>
+      <div
+        className="hospital-app-layout"
+        style={{
+          display: 'flex',
+          flex: 1,
+          minHeight: 'calc(100vh - 70px)',
+          alignItems: 'stretch',
+          position: 'relative',
+        }}
+      >
+        {user && (
+          <HospitalSidebar
+            currentView={currentView}
+            onNavigate={handleNavigate}
+            onOpenProfile={() => setShowProfileModal(true)}
+          />
+        )}
+        <main
+          className="main-content"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            width: '100%',
+            padding: '2rem 1.75rem 5rem',
+            overflowX: 'hidden',
+            boxSizing: 'border-box',
+          }}
+        >
+          {renderDashboardContent()}
+        </main>
+      </div>
 
       {/* Hospital Footer */}
       <footer

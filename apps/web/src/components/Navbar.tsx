@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { NiramayaLogo } from './NiramayaLogo';
 
@@ -38,31 +39,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNotifications,
   onOpenProfile,
 }) => {
-  const { user, logout, unreadNotifications, quickLogin } = useAuth();
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const { user, logout, unreadNotifications } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close profile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setProfileMenuOpen(false);
-      }
-    };
-    if (profileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [profileMenuOpen]);
-
-  // Close menus on Escape key
+  // Close mobile drawer on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setProfileMenuOpen(false);
         setMobileMenuOpen(false);
       }
     };
@@ -89,6 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isCurrentOnPortal = currentView === 'dashboard';
   const isCurrentOnTracking = currentView === 'tracking';
+  const isCurrentOnBlockchain = currentView === 'blockchain';
 
   const roleColorsMap: Record<Role, { bg: string; gradient: string; accent: string }> = {
     ADMIN: {
@@ -133,11 +117,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     },
   };
   const roleColors = roleColorsMap[user?.role || 'DOCTOR'];
-
-  const handleCardClick = () => {
-    onNavigate(userPortalView);
-    setProfileMenuOpen(false);
-  };
 
   return (
     <header
@@ -231,61 +210,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           <NiramayaLogo size="md" showSubtext={true} />
         </div>
 
-        {/* Navigation items */}
+        {/* Navigation items - sidebar handles all navigation for logged-in users */}
         <nav
           className="desktop-nav"
           style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}
         >
-          {user ? (
-            <>
-              <button
-                onClick={() => onNavigate('dashboard')}
-                style={{
-                  background: isCurrentOnPortal ? 'var(--primary-light)' : 'transparent',
-                  color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-secondary)',
-                  border: isCurrentOnPortal
-                    ? '1px solid rgba(2, 132, 199, 0.25)'
-                    : '1px solid transparent',
-                  padding: '0.5rem 0.95rem',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.86rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <LayoutDashboard size={16} />
-                <span>{userPortalLabel}</span>
-              </button>
-
-              <button
-                onClick={() => onNavigate('tracking')}
-                title="Inpatient Vitals & Telemetry Tracking"
-                style={{
-                  background: isCurrentOnTracking ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
-                  color: isCurrentOnTracking ? '#ef4444' : 'var(--text-secondary)',
-                  border: isCurrentOnTracking
-                    ? '1px solid rgba(239, 68, 68, 0.3)'
-                    : '1px solid transparent',
-                  padding: '0.5rem 0.95rem',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.86rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Activity size={16} color={isCurrentOnTracking ? '#ef4444' : 'var(--primary)'} />
-                <span>Health Telemetry</span>
-              </button>
-            </>
-          ) : (
+          {!user && (
             <div
               style={{
                 fontSize: '0.8rem',
@@ -372,500 +302,89 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
 
-              {/* User badge card & dropdown container */}
-              <div className="navbar-profile-control" ref={menuRef}>
-                <div
-                  className="navbar-profile-trigger"
-                  title={`Open ${userPortalLabel}`}
+              {/* User profile button - directly navigates to profile, no dropdown menu */}
+              <div className="navbar-profile-control">
+                <button
+                  type="button"
+                  className="navbar-profile-portal-button"
+                  aria-label="View Profile"
+                  onClick={() => onNavigate('profile')}
+                  title="View Profile Section"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    background: isCurrentOnPortal
+                    gap: '0.55rem',
+                    padding: '0.35rem 0.75rem 0.35rem 0.45rem',
+                    background: currentView === 'profile'
                       ? 'var(--primary-light)'
                       : 'var(--bg-card-subtle)',
                     borderRadius: 'var(--radius-full)',
-                    border: isCurrentOnPortal
+                    border: currentView === 'profile'
                       ? '1.5px solid var(--primary)'
                       : '1px solid var(--border)',
-                    boxShadow: isCurrentOnPortal ? '0 0 0 2px rgba(2, 132, 199, 0.15)' : 'none',
+                    boxShadow: currentView === 'profile' ? '0 0 0 2px rgba(2, 132, 199, 0.15)' : 'none',
                     userSelect: 'none',
                     cursor: 'pointer',
                     transition: 'all 0.18s ease',
                   }}
                 >
-                  {/* Left Clickable Area (Navigates directly to user's portal) */}
-                  <button
-                    type="button"
-                    className="navbar-profile-portal-button"
-                    aria-label={`Open ${userPortalLabel}`}
-                    onClick={handleCardClick}
+                  <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.55rem',
-                      padding: '0.35rem 0.5rem 0.35rem 0.65rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '30px',
-                        height: '30px',
-                        borderRadius: '50%',
-                        background: roleColors.gradient,
-                        color: 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        flexShrink: 0,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {user.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt={user.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        user.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div
-                      className="user-badge-text"
-                      style={{ textAlign: 'left', lineHeight: 1.15 }}
-                    >
-                      <div
-                        style={{
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-primary)',
-                          maxWidth: '120px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {user.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.67rem',
-                          fontWeight: 600,
-                          color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-muted)',
-                          letterSpacing: '0.04em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {user.role}
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Right Chevron Button (Toggles profile menu) */}
-                  <button
-                    type="button"
-                    className="navbar-profile-menu-toggle"
-                    aria-label={profileMenuOpen ? 'Close profile menu' : 'Open profile menu'}
-                    aria-expanded={profileMenuOpen}
-                    aria-controls="navbar-profile-menu"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setProfileMenuOpen((prev) => !prev);
-                    }}
-                    title="Profile menu"
-                    style={{
-                      padding: '0.35rem 0.55rem 0.35rem 0.2rem',
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      background: roleColors.gradient,
+                      color: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: 'var(--text-muted)',
-                      borderLeft: '1px solid var(--border)',
-                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      flexShrink: 0,
+                      overflow: 'hidden',
                     }}
                   >
-                    <ChevronDown
-                      size={14}
-                      style={{
-                        transform: profileMenuOpen ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.15s ease',
-                      }}
-                    />
-                  </button>
-                </div>
-
-                {/* Dropdown Menu */}
-                {profileMenuOpen && (
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      user.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
                   <div
-                    id="navbar-profile-menu"
-                    className="navbar-profile-menu"
-                    role="region"
-                    aria-label="Profile and account menu"
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      right: 0,
-                      width: 'min(360px, calc(100vw - 1.5rem))',
-                      maxHeight: 'min(75vh, 600px)',
-                      overflowY: 'auto',
-                      overscrollBehavior: 'contain',
-                      background: 'var(--bg-card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-md)',
-                      boxShadow: 'var(--shadow-lg)',
-                      padding: '0.5rem',
-                      zIndex: 100,
-                      animation: 'slideUp 0.18s ease-out',
-                    }}
+                    className="user-badge-text"
+                    style={{ textAlign: 'left', lineHeight: 1.15 }}
                   >
-                    {/* Header info with Avatar */}
                     <div
-                      className="navbar-profile-menu-header"
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        padding: '0.6rem 0.75rem',
-                        borderBottom: '1px solid var(--border)',
-                        marginBottom: '0.4rem',
-                      }}
-                    >
-                      <div
-                        className="navbar-profile-menu-avatar"
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          background: roleColors.gradient,
-                          color: 'white',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '1rem',
-                          fontWeight: 800,
-                          overflow: 'hidden',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          user.name.charAt(0).toUpperCase()
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: '0.88rem',
-                            fontWeight: 800,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {user.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '0.72rem',
-                            color: 'var(--text-muted)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            marginTop: '1px',
-                          }}
-                        >
-                          {user.email}
-                        </div>
-                        <div style={{ marginTop: '0.35rem' }}>
-                          <span
-                            style={{
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              padding: '0.12rem 0.45rem',
-                              borderRadius: '999px',
-                              background: `${roleColors.accent}18`,
-                              color: roleColors.accent,
-                              border: `1px solid ${roleColors.accent}40`,
-                            }}
-                          >
-                            {user.role} ACCOUNT
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Edit Profile & Photo Button */}
-                    <button
-                      className="navbar-profile-menu-featured"
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        onOpenProfile();
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(2, 132, 199, 0.08)',
-                        color: 'var(--primary)',
-                        border: '1px dashed var(--primary)',
                         fontSize: '0.82rem',
                         fontWeight: 700,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        marginBottom: '0.4rem',
+                        color: currentView === 'profile' ? 'var(--primary)' : 'var(--text-primary)',
+                        maxWidth: '120px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      <Edit3 size={15} />
-                      <span>Edit Profile & Photo</span>
-                    </button>
-
-                    {/* Portal Link */}
-                    <button
-                      className={`navbar-profile-menu-link ${isCurrentOnPortal ? 'is-active' : ''}`}
-                      aria-current={isCurrentOnPortal ? 'page' : undefined}
-                      onClick={handleCardClick}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: isCurrentOnPortal ? 'var(--primary-light)' : 'transparent',
-                        color: isCurrentOnPortal ? 'var(--primary)' : 'var(--text-primary)',
-                        border: 'none',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <LayoutDashboard size={15} color="var(--primary)" />
-                        <span>{userPortalLabel}</span>
-                      </div>
-                      {isCurrentOnPortal && <CheckCircle2 size={14} color="var(--primary)" />}
-                    </button>
-
-                    {/* Health Tracking Panel Link */}
-                    <button
-                      className={`navbar-profile-menu-link ${isCurrentOnTracking ? 'is-active is-tracking' : ''}`}
-                      aria-current={isCurrentOnTracking ? 'page' : undefined}
-                      onClick={() => {
-                        onNavigate('tracking');
-                        setProfileMenuOpen(false);
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: isCurrentOnTracking ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
-                        color: isCurrentOnTracking ? '#ef4444' : 'var(--text-primary)',
-                        border: 'none',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Activity size={15} color="#ef4444" />
-                        <span>Health Tracking Panel</span>
-                      </div>
-                      {isCurrentOnTracking && <CheckCircle2 size={14} color="#ef4444" />}
-                    </button>
-
-                    {/* Directory Link */}
-                    <button
-                      className="navbar-profile-menu-link"
-                      onClick={() => {
-                        onNavigate('directory');
-                        setProfileMenuOpen(false);
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'transparent',
-                        color: 'var(--text-primary)',
-                        border: 'none',
-                        fontSize: '0.82rem',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <Stethoscope size={15} color="var(--text-secondary)" />
-                      <span>Find Doctors</span>
-                    </button>
-
-                    {/* Notifications Link */}
-                    <button
-                      className="navbar-profile-menu-link"
-                      onClick={() => {
-                        onOpenNotifications();
-                        setProfileMenuOpen(false);
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'transparent',
-                        color: 'var(--text-primary)',
-                        border: 'none',
-                        fontSize: '0.82rem',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Bell size={15} color="var(--text-secondary)" />
-                        <span>Notifications</span>
-                      </div>
-                      {unreadNotifications > 0 && (
-                        <span
-                          style={{
-                            background: 'var(--danger)',
-                            color: 'white',
-                            fontSize: '0.65rem',
-                            fontWeight: 700,
-                            padding: '0.1rem 0.4rem',
-                            borderRadius: '999px',
-                          }}
-                        >
-                          {unreadNotifications}
-                        </span>
-                      )}
-                    </button>
-
-                    <div className="navbar-profile-menu-divider" />
-
-                    {/* Switch Station */}
-                    <div className="navbar-role-section">
-                      <div className="navbar-role-section-title">Switch Station</div>
-                      <div className="navbar-role-switcher">
-                        {(
-                          [
-                            {
-                              role: 'DOCTOR' as Role,
-                              label: 'Doctor',
-                              emoji: '🩺',
-                              color: '#0284c7',
-                            },
-                            {
-                              role: 'NURSE' as Role,
-                              label: 'Nurse',
-                              emoji: '👩‍⚕️',
-                              color: '#059669',
-                            },
-                            {
-                              role: 'RECEPTIONIST' as Role,
-                              label: 'Reception',
-                              emoji: '📋',
-                              color: '#d97706',
-                            },
-                            {
-                              role: 'PHARMACIST' as Role,
-                              label: 'Pharmacy',
-                              emoji: '💊',
-                              color: '#2563eb',
-                            },
-                            {
-                              role: 'LABORATORY_STAFF' as Role,
-                              label: 'Lab',
-                              emoji: '🔬',
-                              color: '#db2777',
-                            },
-                          ] as { role: Role; label: string; emoji: string; color: string }[]
-                        ).map(({ role, label, emoji, color }) => {
-                          const isActive = user.role === role;
-                          return (
-                            <button
-                              key={role}
-                              className={`navbar-role-chip ${isActive ? 'is-active' : ''}`}
-                              aria-pressed={isActive}
-                              onClick={() => {
-                                setProfileMenuOpen(false);
-                                quickLogin(role);
-                                onNavigate('dashboard');
-                              }}
-                              title={`Switch to ${label} station`}
-                              style={{
-                                padding: '0.28rem 0.6rem',
-                                borderRadius: '999px',
-                                fontSize: '0.73rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                border: isActive
-                                  ? `1.5px solid ${color}`
-                                  : '1.5px solid transparent',
-                                background: isActive ? `${color}18` : 'var(--bg-card-subtle)',
-                                color: isActive ? color : 'var(--text-secondary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                transition: 'all 0.15s ease',
-                                outline: 'none',
-                              }}
-                            >
-                              <span>{emoji}</span>
-                              <span>{label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {user.name}
                     </div>
-
-                    <div className="navbar-profile-menu-divider" />
-
-                    {/* Logout */}
-                    <button
-                      className="navbar-profile-signout"
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        logout();
-                      }}
+                    <div
                       style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.55rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'transparent',
-                        color: 'var(--danger)',
-                        border: 'none',
-                        fontSize: '0.82rem',
+                        fontSize: '0.67rem',
                         fontWeight: 600,
-                        cursor: 'pointer',
-                        textAlign: 'left',
+                        color: currentView === 'profile' ? 'var(--primary)' : 'var(--text-muted)',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
                       }}
                     >
-                      <LogOut size={15} />
-                      <span>Sign Out</span>
-                    </button>
+                      {user.role}
+                    </div>
                   </div>
-                )}
+                </button>
               </div>
             </>
           ) : (
@@ -896,31 +415,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer" role="navigation" aria-label="Mobile Navigation">
-          <button
-            type="button"
-            className={`mobile-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
-            onClick={() => {
-              onNavigate('dashboard');
-              setMobileMenuOpen(false);
-            }}
-          >
-            <LayoutDashboard size={18} color="var(--primary)" />
-            <span>{user ? userPortalLabel : 'Hospital Management Portal'}</span>
-          </button>
-
-          {user && (
-            <button
-              type="button"
-              className={`mobile-nav-item ${currentView === 'tracking' ? 'active' : ''}`}
-              onClick={() => {
-                onNavigate('tracking');
-                setMobileMenuOpen(false);
-              }}
-            >
-              <Activity size={18} color="#ef4444" />
-              <span>Inpatient Health Telemetry</span>
-            </button>
-          )}
+          {/* Navigation handled by sidebar - mobile drawer shows account actions only */}
 
           {user ? (
             <>
@@ -935,77 +430,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Edit3 size={18} />
                 <span>Edit Profile &amp; Photo</span>
               </button>
-
-              {/* Switch Station (mobile) */}
-              <div style={{ padding: '0.5rem 1rem' }}>
-                <div
-                  style={{
-                    fontSize: '0.67rem',
-                    fontWeight: 800,
-                    color: 'var(--text-muted)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.07em',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  Switch Station
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {(
-                    [
-                      { role: 'DOCTOR' as Role, label: 'Doctor', emoji: '🩺', color: '#0284c7' },
-                      { role: 'NURSE' as Role, label: 'Nurse', emoji: '👩‍⚕️', color: '#059669' },
-                      {
-                        role: 'RECEPTIONIST' as Role,
-                        label: 'Reception',
-                        emoji: '📋',
-                        color: '#d97706',
-                      },
-                      {
-                        role: 'PHARMACIST' as Role,
-                        label: 'Pharmacy',
-                        emoji: '💊',
-                        color: '#2563eb',
-                      },
-                      {
-                        role: 'LABORATORY_STAFF' as Role,
-                        label: 'Lab',
-                        emoji: '🔬',
-                        color: '#db2777',
-                      },
-                    ] as { role: Role; label: string; emoji: string; color: string }[]
-                  ).map(({ role, label, emoji, color }) => {
-                    const isActive = user.role === role;
-                    return (
-                      <button
-                        key={role}
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          quickLogin(role);
-                          onNavigate('dashboard');
-                        }}
-                        style={{
-                          padding: '0.32rem 0.65rem',
-                          borderRadius: '999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          border: isActive ? `1.5px solid ${color}` : '1.5px solid var(--border)',
-                          background: isActive ? `${color}18` : 'var(--bg-card-subtle)',
-                          color: isActive ? color : 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
-                          outline: 'none',
-                        }}
-                      >
-                        <span>{emoji}</span>
-                        <span>{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
 
               <button
                 type="button"

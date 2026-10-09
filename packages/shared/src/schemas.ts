@@ -307,3 +307,87 @@ export const adminAuditQuerySchema = paginationSchema.extend({
 
 export const updateUserStatusSchema = z.object({ status: z.enum(USER_STATUSES) });
 export const updateDoctorVerificationSchema = z.object({ isVerified: z.boolean() });
+
+// ---------- departments ----------
+export const createDepartmentSchema = z.object({
+  name: trimmed(2, 100, 'Department name'),
+  code: trimmed(2, 20, 'Department code').toUpperCase(),
+  description: optionalText(500),
+  headDoctorId: z.number().int().positive().optional(),
+});
+export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
+
+export const updateDepartmentSchema = createDepartmentSchema.partial();
+export type UpdateDepartmentInput = z.infer<typeof updateDepartmentSchema>;
+
+// ---------- tasks ----------
+export const createTaskSchema = z.object({
+  title: trimmed(3, 150, 'Task title'),
+  description: optionalText(1000),
+  assignedToUserId: z.number().int().positive().optional(),
+  ward: optionalText(100),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'CRITICAL']).default('NORMAL'),
+  patientId: z.number().int().positive().optional(),
+  dueDate: z.string().datetime().optional().nullable(),
+});
+export type CreateTaskInput = z.infer<typeof createTaskSchema>;
+
+export const updateTaskStatusSchema = z.object({
+  status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED']),
+});
+export type UpdateTaskStatusInput = z.infer<typeof updateTaskStatusSchema>;
+
+// ---------- patient assignments ----------
+export const assignPatientSchema = z.object({
+  doctorId: z.number().int().positive('Doctor ID is required'),
+  patientId: z.number().int().positive('Patient ID is required'),
+  notes: optionalText(500),
+});
+export type AssignPatientInput = z.infer<typeof assignPatientSchema>;
+
+// ---------- medical records ----------
+export const createMedicalRecordSchema = z.object({
+  patientId: z.number().int().positive('Patient ID is required'),
+  recordType: trimmed(2, 50, 'Record type').default('CLINICAL_NOTE'),
+  chiefComplaint: optionalText(1000),
+  diagnosis: optionalText(1000),
+  soapNotes: trimmed(5, 5000, 'Clinical / SOAP notes'),
+  treatmentPlan: optionalText(2000),
+});
+export type CreateMedicalRecordInput = z.infer<typeof createMedicalRecordSchema>;
+
+// ---------- prescriptions ----------
+export const createPrescriptionSchema = z.object({
+  patientId: z.number().int().positive('Patient ID is required'),
+  medicationName: trimmed(2, 150, 'Medication name'),
+  dosage: trimmed(1, 50, 'Dosage'),
+  frequency: trimmed(1, 50, 'Frequency'),
+  duration: trimmed(1, 50, 'Duration'),
+  instructions: optionalText(1000),
+});
+export type CreatePrescriptionInput = z.infer<typeof createPrescriptionSchema>;
+
+export const updatePrescriptionStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'DISCONTINUED', 'COMPLETED']),
+});
+export type UpdatePrescriptionStatusInput = z.infer<typeof updatePrescriptionStatusSchema>;
+
+// ---------- diagnostic reports ----------
+export const createReportSchema = z.object({
+  patientId: z.number().int().positive('Patient ID is required'),
+  prescribingDoctorId: z.number().int().positive().optional().nullable(),
+  testName: trimmed(2, 150, 'Test name'),
+  category: trimmed(2, 80, 'Category').default('Diagnostic'),
+  reportDate: isoDateSchema.optional(),
+  summary: optionalText(2000),
+  status: z.enum(['PENDING', 'COMPLETED', 'VERIFIED']).default('COMPLETED'),
+});
+export type CreateReportInput = z.infer<typeof createReportSchema>;
+
+export const reportListQuerySchema = paginationSchema.extend({
+  patientId: z.coerce.number().int().positive().optional(),
+  category: z.string().trim().max(80).optional(),
+  status: z.enum(['PENDING', 'COMPLETED', 'VERIFIED']).optional(),
+  q: z.string().trim().max(100).optional(),
+});
+export type ReportListQuery = z.infer<typeof reportListQuerySchema>;

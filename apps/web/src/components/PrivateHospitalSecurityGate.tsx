@@ -26,7 +26,7 @@ interface PrivateHospitalSecurityGateProps {
 export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGateProps> = ({
   onSuccess,
 }) => {
-  const { login, quickLogin } = useAuth();
+  const { login } = useAuth();
   const [activePortal, setActivePortal] = useState<'DOCTOR' | 'STAFF'>('DOCTOR');
 
   // Form states
@@ -340,120 +340,7 @@ export const PrivateHospitalSecurityGate: React.FC<PrivateHospitalSecurityGatePr
                 {activePortal === 'STAFF' && 'Hospital Staff Station Sign In'}
               </h2>
             </div>
-
-            {/* 1-Click Fast Verification Button */}
-            {activePortal === 'DOCTOR' && (
-              <button
-                type="button"
-                onClick={() => {
-                  quickLogin('DOCTOR');
-                  onSuccess?.();
-                }}
-                style={{
-                  background: 'rgba(2, 132, 199, 0.1)',
-                  color: '#0284c7',
-                  border: '1px solid rgba(2, 132, 199, 0.3)',
-                  padding: '0.55rem 1rem',
-                  borderRadius: '0.6rem',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                }}
-              >
-                <Sparkles size={14} /> 1-Click Sign In as Dr. Priya Sharma
-              </button>
-            )}
           </div>
-
-          {/* If STAFF Portal: Display Staff Station Selector Chips */}
-          {activePortal === 'STAFF' && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div
-                style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: 'var(--text-secondary)',
-                  marginBottom: '0.6rem',
-                }}
-              >
-                Select Staff Station for 1-Click Instant Login or auto-fill credentials:
-              </div>
-              <div
-                className="staff-station-grid"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '0.65rem',
-                }}
-              >
-                {staffStations.map((station) => (
-                  <button
-                    key={station.id}
-                    type="button"
-                    onClick={() => {
-                      setEmail(station.email);
-                      setPassword('Demo@12345');
-                      quickLogin(station.role);
-                      onSuccess?.();
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.65rem',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '0.75rem',
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-card-subtle, rgba(0, 0, 0, 0.02))',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = station.color;
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
-                      e.currentTarget.style.transform = 'none';
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '8px',
-                        background: station.bg,
-                        color: station.color,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {station.icon}
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: '0.82rem',
-                          fontWeight: 800,
-                          color: 'var(--text-primary)',
-                        }}
-                      >
-                        {station.name}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {station.person}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {localError && (
             <div
